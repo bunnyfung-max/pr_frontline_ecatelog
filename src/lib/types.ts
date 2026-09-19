@@ -7,6 +7,15 @@ export interface Folder {
   subtitle: string;
   order: number;
 }
+export interface EshopProductLink {
+  url: string;
+  title: string;
+  brand: string;
+  sku: string;
+  description: string;
+  image: string;
+  fetchedAt: string;
+}
 export interface Product {
   id: string;
   name: string;
@@ -31,6 +40,8 @@ export interface Content {
   fileName: string;
   cover: string;
   keywords: string;
+  tags: string[];
+  eshopProducts: EshopProductLink[];
   productIds: string[];
   storeUrl?: string;
   eshopUrl?: string;

@@ -1,7 +1,14 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { ArrowUpRight, ChevronRight, Folder as FolderIcon, Search } from 'lucide-react';
+import {
+  ArrowUp,
+  ArrowUpRight,
+  ChevronRight,
+  Folder as FolderIcon,
+  Search,
+  X,
+} from 'lucide-react';
 import type { Catalog, Content, Folder, Scene } from '@/lib/types';
 import { TYPE_LABEL } from '@/lib/types';
 import { byOrder, folderLabel, trail, type SearchResults } from '@/lib/catalog';
@@ -62,6 +69,15 @@ export function FrontlineBrowser({
   const scenes = folder?.id === 'scenes' ? data.scenes.filter((s) => s.active).sort(byOrder) : [];
   const total = result ? result.contents.length + result.folders.length + result.scenes.length : 0;
   const path = (id: string) => trail(data.folders, id).map(folderLabel).join(' / ');
+  const hints = ['產品', '品牌', '顏色', '風格', '屋苑'];
+  const submit = () => {
+    if (!input.trim()) {
+      inputRef.current?.focus();
+      return;
+    }
+    if (input.trim() === query) setRetry((n) => n + 1);
+    else onSearch(input.trim());
+  };
   const directory = (items: Folder[], cards = false) => (
     <div className={`directory-grid${cards ? ' folder-card-grid' : ''}`}>
       {items.map((f) => (
@@ -72,7 +88,7 @@ export function FrontlineBrowser({
         >
           {cards && (
             <span className="folder-tile-icon" aria-hidden="true">
-              <FolderIcon size={26} strokeWidth={1.3} />
+              <FolderIcon size={22} strokeWidth={1.5} />
             </span>
           )}
           <span>
@@ -94,12 +110,14 @@ export function FrontlineBrowser({
             )}
             {searching && <small>{path(f.id)}</small>}
           </span>
-          <ChevronRight size={28} aria-hidden="true" />
+          <ChevronRight size={18} aria-hidden="true" />
         </button>
       ))}
     </div>
   );
-  const sceneList = (items: Scene[]) => (
+  const sceneList = (items: Scene[]) => {
+    if (!items.length) return null;
+    return (
     <div className="directory-grid">
       {items.map((s) =>
         s.url ? (
@@ -114,7 +132,7 @@ export function FrontlineBrowser({
               <strong>{s.name}</strong>
               <small>開啟 eShop 推介</small>
             </span>
-            <ArrowUpRight size={28} aria-hidden="true" />
+            <ArrowUpRight size={18} aria-hidden="true" />
           </a>
         ) : (
           <div className="directory-entry unconfigured" key={s.id} aria-disabled="true">
@@ -126,8 +144,11 @@ export function FrontlineBrowser({
         ),
       )}
     </div>
-  );
-  const contentList = (items: Content[]) => (
+    );
+  };
+  const contentList = (items: Content[]) => {
+    if (!items.length) return null;
+    return (
     <div className="search-content-list">
       {items.map((c) => (
         <button className="search-content-entry" key={c.id} onClick={() => open(c)}>
@@ -141,73 +162,84 @@ export function FrontlineBrowser({
             <h3>{c.name}</h3>
             <span>開啟展示</span>
           </div>
-          <ChevronRight size={28} aria-hidden="true" />
+          <ChevronRight size={18} aria-hidden="true" />
         </button>
       ))}
     </div>
-  );
+    );
+  };
   return (
     <section
       className={`frontline-browser ${home ? 'search-home' : 'search-folder'}`}
       aria-label="銷售資料搜尋及目錄"
     >
-      {home && (
-        <div className="search-intro">
-          <h1>想找甚麼銷售資料？</h1>
-          <p>輸入關鍵字，即可搜尋銷售資料。</p>
-        </div>
-      )}
-      <form
-        className="frontline-search"
-        role="search"
-        onSubmit={(e) => {
-          e.preventDefault();
-          // Some IMEs use Enter to choose a character; don't search before composition ends.
-          if (!input.trim()) {
-            inputRef.current?.focus();
-            return;
-          }
-          if (input.trim() === query) setRetry((n) => n + 1);
-          else onSearch(input.trim());
-        }}
-      >
-        <label className="directory-search">
-          <Search size={40} strokeWidth={2} aria-hidden="true" />
-          <input
-            ref={inputRef}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && e.nativeEvent.isComposing) e.preventDefault();
-            }}
-            type="search"
-            enterKeyHint="search"
-            placeholder="輸入任何關鍵字"
-            aria-label={home ? '搜尋全部銷售資料' : '搜尋此目錄'}
-            aria-describedby={home ? 'search-hint' : 'search-scope'}
-            autoComplete="off"
-          />
-          {input && (
-            <button
-              className="search-clear"
-              type="button"
-              onClick={() => {
-                setInput('');
-                onSearch('');
-                inputRef.current?.focus();
+      <div className={home ? 'search-hero' : 'search-hero search-hero-compact'}>
+        {home && (
+          <div className="search-intro">
+            <h1>想找甚麼銷售資料？</h1>
+          </div>
+        )}
+        <form
+          className="frontline-search"
+          role="search"
+          onSubmit={(e) => {
+            e.preventDefault();
+            submit();
+          }}
+        >
+          <div className="directory-search">
+            <Search size={20} strokeWidth={2} aria-hidden="true" />
+            <input
+              ref={inputRef}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && e.nativeEvent.isComposing) e.preventDefault();
               }}
-            >
-              清除
+              type="search"
+              enterKeyHint="search"
+              placeholder={home ? '搜尋產品、品牌、屋苑…' : '搜尋此目錄'}
+              aria-label={home ? '搜尋全部銷售資料' : '搜尋此目錄'}
+              aria-describedby={home ? 'search-hint' : 'search-scope'}
+              autoComplete="off"
+            />
+            {input && (
+              <button
+                className="search-clear icon-only"
+                type="button"
+                aria-label="清除"
+                onClick={() => {
+                  setInput('');
+                  onSearch('');
+                  inputRef.current?.focus();
+                }}
+              >
+                <X size={18} strokeWidth={2} />
+              </button>
+            )}
+            <button type="submit" className="search-submit" aria-label="搜尋">
+              <ArrowUp size={18} strokeWidth={2.2} />
             </button>
+          </div>
+          {home && (
+            <div id="search-hint" className="search-chips" aria-label="搜尋建議">
+              {hints.map((hint) => (
+                <button
+                  key={hint}
+                  type="button"
+                  className="search-chip"
+                  onClick={() => {
+                    setInput(hint);
+                    onSearch(hint);
+                  }}
+                >
+                  {hint}
+                </button>
+              ))}
+            </div>
           )}
-        </label>
-        <p id="search-hint" className="search-hint">
-          例如：產品、品牌、顏色、風格、屋苑
-        </p>
-        <button type="submit" className="search-submit">
-          搜尋
-        </button>
-      </form>
+        </form>
+      </div>
       {!home && (
         <p className="search-scope" id="search-scope">
           只搜尋「{folderLabel(folder)}」及下層目錄

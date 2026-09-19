@@ -16,10 +16,16 @@ import type { PDFDocumentProxy } from 'pdfjs-dist';
 import type { Catalog, Content } from '@/lib/types';
 import { TYPE_LABEL } from '@/lib/types';
 import { activeOffer, byOrder } from '@/lib/catalog';
-import { readerAssets, readerLeaves, readerSpread, previousReaderPage } from '@/lib/sales-kit';
-import { assetUrl } from '@/lib/client';
+import {
+  readerAssets,
+  readerLeaves,
+  readerSpread,
+  previousReaderPage,
+  type ReaderLeaf,
+} from '@/lib/sales-kit';
+import { useContentAssetCache } from '@/hooks/use-content-cache';
 import { External, Thumb } from './ui';
-import { ContentShoppingLinks } from './shopping-links';
+import { ContentShoppingLinks, useEshopProductPrices } from './shopping-links';
 export function Viewer({
   content,
   data,
@@ -39,12 +45,13 @@ export function Viewer({
   const [fullscreen, setFullscreen] = useState(false);
   const [pdfs, setPdfs] = useState<Record<string, PDFDocumentProxy>>({});
   const [pdfReady, setPdfReady] = useState(false);
-  const [error, setError] = useState('');
   const [reload, setReload] = useState(0);
   const assets = useMemo(
     () => readerAssets(content),
     [content.files, content.type, content.salesKit],
   );
+  const eshopPrices = useEshopProductPrices(content.eshopProducts ?? []);
+  const { resolveAssetUrl } = useContentAssetCache(content);
   useEffect(() => {
     const el = dialog.current;
     el?.showModal();
@@ -63,7 +70,6 @@ export function Viewer({
   useEffect(() => {
     setPage(1);
     setZoom(1);
-    setError('');
   }, [assets]);
   useEffect(() => {
     let cancelled = false;
@@ -84,7 +90,7 @@ export function Viewer({
         await Promise.all(
           refs.map(async (ref) => {
             try {
-              const task = lib.getDocument({ url: assetUrl(ref) });
+              const task = lib.getDocument({ url: resolveAssetUrl(ref) });
               tasks.push(task);
               loaded[ref] = await task.promise;
             } catch {
@@ -107,7 +113,7 @@ export function Viewer({
         void task.destroy().catch(() => {});
       });
     };
-  }, [assets, reload]);
+  }, [assets, reload, resolveAssetUrl]);
   const horizontal = previewOrientation ? previewOrientation === 'landscape' : landscape;
   const leaves = useMemo(
     () =>
@@ -126,7 +132,6 @@ export function Viewer({
   const navigate = (next: number) => {
     setPage(next);
     setZoom(1);
-    setError('');
   };
   const closeViewer = () => {
     if (document.fullscreenElement) void document.exitFullscreen();
@@ -143,9 +148,9 @@ export function Viewer({
       aria-label={`${content.name} 閱讀器`}
     >
       <header className="viewer-top">
-        <button className="subtle" onClick={closeViewer}>
-          <ArrowLeft size={19} />
-          <span>返回目錄</span>
+        <button className="subtle viewer-back" onClick={closeViewer} aria-label="返回目錄">
+          <ArrowLeft size={17} />
+          <span className="viewer-back-label">返回</span>
         </button>
         <div className="viewer-title">
           <strong>{content.name}</strong>
@@ -156,13 +161,14 @@ export function Viewer({
           </small>
         </div>
         <button
-          className={`shopping-toggle ${panel ? 'selected' : ''}`}
+          type="button"
+          className={`shopping-toggle viewer-shop ${panel ? 'selected' : ''}`}
           onClick={() => setPanel(!panel)}
           aria-expanded={panel}
           aria-controls="shopping-panel"
+          aria-label="購物功能列"
         >
-          <ShoppingBag size={19} />
-          <span>購物功能列</span>
+          <ShoppingBag size={17} />
         </button>
       </header>
       <div className="viewer-body">
@@ -171,22 +177,6 @@ export function Viewer({
             {loading ? (
               <div className="loading" role="status">
                 正在載入 PDF 頁次…
-              </div>
-            ) : error || current?.failed ? (
-              <div className="empty">
-                <h2>內容未能載入</h2>
-                <p role="alert">
-                  {error || `${current.label}：PDF 未能載入，可重試或翻到下一頁。`}
-                </p>
-                <button
-                  className="secondary"
-                  onClick={() => {
-                    setError('');
-                    setReload((k) => k + 1);
-                  }}
-                >
-                  重新載入
-                </button>
               </div>
             ) : current?.kind === 'image' || current?.kind === 'pdf' ? (
               <div
@@ -204,30 +194,28 @@ export function Viewer({
                       data-file-kind={leaf.kind}
                       data-file-label={leaf.label}
                     >
-                      {leaf.kind === 'pdf' && pdfs[leaf.ref] ? (
-                        <PdfPage pdf={pdfs[leaf.ref]} page={leaf.pdfPage!} />
-                      ) : (
-                        <img
-                          src={assetUrl(leaf.ref)}
-                          alt={`${content.name}，${leaf.label}，第 ${n} 頁`}
-                          onError={() => setError('圖片未能載入，請檢查檔案或網絡連線。')}
-                        />
-                      )}
+                      <ReaderPageMedia
+                        contentName={content.name}
+                        leaf={leaf}
+                        page={n}
+                        pdf={leaf.kind === 'pdf' ? pdfs[leaf.ref] : undefined}
+                        reload={reload}
+                        resolveAssetUrl={resolveAssetUrl}
+                        onRetry={() => setReload((k) => k + 1)}
+                      />
                       <span className="paper-number">{n}</span>
                     </div>
                   );
                 })}
               </div>
             ) : current?.kind === 'video' ? (
-              <video
-                className="reader-video"
-                key={`${current.ref}-${page}-${reload}`}
-                src={assetUrl(current.ref)}
-                aria-label={current.label}
-                controls
-                playsInline
-                preload="metadata"
-                onError={() => setError('影片未能播放，請確認影片格式及檔案狀態。')}
+              <ReaderPageMedia
+                contentName={content.name}
+                leaf={current}
+                page={page}
+                reload={reload}
+                resolveAssetUrl={resolveAssetUrl}
+                onRetry={() => setReload((k) => k + 1)}
               />
             ) : current?.kind === 'link' ? (
               <div className="link-preview">
@@ -243,27 +231,6 @@ export function Viewer({
             )}
           </div>
           <div className="reader-toolbar">
-            <div className="zoom-controls">
-              <button
-                className="icon-btn"
-                aria-label="縮小"
-                disabled={zoom <= 1 || !canZoom}
-                onClick={() => setZoom((z) => Math.max(1, z - 0.25))}
-              >
-                <ZoomOut size={19} />
-              </button>
-              <button className="zoom-reset" onClick={() => setZoom(1)} aria-label="重設縮放">
-                {Math.round(zoom * 100)}%
-              </button>
-              <button
-                className="icon-btn"
-                aria-label="放大"
-                disabled={zoom >= 2.5 || !canZoom}
-                onClick={() => setZoom((z) => Math.min(2.5, z + 0.25))}
-              >
-                <ZoomIn size={19} />
-              </button>
-            </div>
             <div className="page-controls">
               <button
                 className="icon-btn"
@@ -271,7 +238,7 @@ export function Viewer({
                 disabled={page <= 1 || loading}
                 onClick={() => navigate(previousReaderPage(leaves, page, horizontal))}
               >
-                <ChevronLeft />
+                <ChevronLeft size={18} />
               </button>
               <span aria-live="polite">
                 {loading ? '載入中' : `${pages.join('–') || '0'} / ${total}`}
@@ -282,22 +249,45 @@ export function Viewer({
                 disabled={!total || pages.at(-1)! >= total || loading}
                 onClick={() => navigate(Math.min(total, pages.at(-1)! + 1))}
               >
-                <ChevronRight />
+                <ChevronRight size={18} />
               </button>
             </div>
-            <button
-              className="icon-btn fullscreen-control"
-              aria-label={fullscreen ? '退出全螢幕' : '全螢幕'}
-              onClick={() => {
-                if (document.fullscreenElement) void document.exitFullscreen();
-                else
-                  void dialog.current
-                    ?.requestFullscreen?.()
-                    .catch(() => setError('此瀏覽器未支援全螢幕，可繼續正常閱讀。'));
-              }}
-            >
-              {fullscreen ? <Minimize size={19} /> : <Maximize size={19} />}
-            </button>
+            <div className="reader-toolbar-tools">
+              <div className="zoom-controls">
+                <button
+                  className="icon-btn"
+                  aria-label="縮小"
+                  disabled={zoom <= 1 || !canZoom}
+                  onClick={() => setZoom((z) => Math.max(1, z - 0.25))}
+                >
+                  <ZoomOut size={17} />
+                </button>
+                <button className="zoom-reset" onClick={() => setZoom(1)} aria-label="重設縮放">
+                  {Math.round(zoom * 100)}%
+                </button>
+                <button
+                  className="icon-btn"
+                  aria-label="放大"
+                  disabled={zoom >= 2.5 || !canZoom}
+                  onClick={() => setZoom((z) => Math.min(2.5, z + 0.25))}
+                >
+                  <ZoomIn size={17} />
+                </button>
+              </div>
+              <button
+                className="icon-btn fullscreen-control"
+                aria-label={fullscreen ? '退出全螢幕' : '全螢幕'}
+                onClick={() => {
+                  if (document.fullscreenElement) void document.exitFullscreen();
+                  else
+                    void dialog.current
+                      ?.requestFullscreen?.()
+                      .catch(() => undefined);
+                }}
+              >
+                {fullscreen ? <Minimize size={17} /> : <Maximize size={17} />}
+              </button>
+            </div>
           </div>
         </section>
         {panel && (
@@ -315,7 +305,11 @@ export function Viewer({
                 <X size={21} />
               </button>
             </div>
-            <ContentShoppingLinks content={content} products={data.products} />
+            <ContentShoppingLinks
+              content={content}
+              products={data.products}
+              eshopPrices={eshopPrices}
+            />
             <div className="list-title">
               <h3>eShop Bundle Offer</h3>
               <span>組合推介</span>
@@ -345,6 +339,69 @@ export function Viewer({
         )}
       </div>
     </dialog>
+  );
+}
+function ReaderPageMedia({
+  contentName,
+  leaf,
+  page,
+  pdf,
+  reload,
+  resolveAssetUrl,
+  onRetry,
+}: {
+  contentName: string;
+  leaf: ReaderLeaf;
+  page: number;
+  pdf?: PDFDocumentProxy;
+  reload: number;
+  resolveAssetUrl: (ref: string) => string;
+  onRetry: () => void;
+}) {
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    setFailed(false);
+  }, [leaf.ref, leaf.kind, reload]);
+  if (leaf.failed || (leaf.kind === 'pdf' && !pdf)) {
+    return (
+      <div className="reader-page-error">
+        <p role="alert">{leaf.label}：PDF 未能載入，可重試或翻到下一頁。</p>
+        <button type="button" className="secondary" onClick={onRetry}>重新載入</button>
+      </div>
+    );
+  }
+  if (leaf.kind === 'pdf' && pdf) {
+    return <PdfPage pdf={pdf} page={leaf.pdfPage!} />;
+  }
+  if (leaf.kind === 'video') {
+    return (
+      <video
+        className="reader-video"
+        key={`${leaf.ref}-${page}-${reload}`}
+        src={resolveAssetUrl(leaf.ref)}
+        aria-label={leaf.label}
+        controls
+        playsInline
+        preload="metadata"
+        onError={() => setFailed(true)}
+      />
+    );
+  }
+  if (failed) {
+    return (
+      <div className="reader-page-error">
+        <p role="alert">{leaf.label}：圖片未能載入，請檢查檔案或網絡連線。</p>
+        <button type="button" className="secondary" onClick={onRetry}>重新載入</button>
+      </div>
+    );
+  }
+  return (
+    <img
+      key={`${leaf.ref}-${reload}`}
+      src={resolveAssetUrl(leaf.ref)}
+      alt={`${contentName}，${leaf.label}，第 ${page} 頁`}
+      onError={() => setFailed(true)}
+    />
   );
 }
 function PdfPage({ pdf, page }: { pdf: PDFDocumentProxy; page: number }) {

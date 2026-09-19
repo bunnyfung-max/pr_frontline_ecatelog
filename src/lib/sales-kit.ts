@@ -7,8 +7,15 @@ export const KIT_SLOTS = [
   '產品列表（二）',
   '補充圖片',
 ] as const;
+export const KIT_PREVIEW_LABELS = [
+  '平面圖',
+  '效果圖1',
+  '效果圖2',
+  '產品圖1',
+  '產品圖2',
+] as const;
 export const KIT_RESERVED = KIT_SLOTS.length;
-export const KIT_REQUIRED = 4;
+export const KIT_REQUIRED = 1;
 export const MAX_KIT_FILES = 40;
 export const IMAGE_MIMES = ['image/jpeg', 'image/png', 'image/webp'];
 export const KIT_MIMES = [...IMAGE_MIMES, 'application/pdf', 'video/mp4', 'video/webm'];
@@ -43,6 +50,7 @@ export function kitComplete(files: string[]): boolean {
   return Array.from({ length: KIT_REQUIRED }, (_, i) => !!files[i]).every(Boolean);
 }
 export function fileKind(ref: string): ContentType {
+  if (/^https?:\/\//i.test(ref)) return 'link';
   if (/\.pdf$/i.test(ref)) return 'pdf';
   if (/\.(mp4|webm)$/i.test(ref)) return 'video';
   return 'image';
@@ -59,7 +67,7 @@ export function readerAssets(content: Content): ReaderAsset[] {
       : [
           {
             ref,
-            kind: content.salesKit ? fileKind(ref) : content.type,
+            kind: content.type === 'link' ? 'link' : fileKind(ref),
             label: content.salesKit
               ? KIT_SLOTS[i] || `額外檔案 ${i - KIT_RESERVED + 1}`
               : `第 ${i + 1} 份`,

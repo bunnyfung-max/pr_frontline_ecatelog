@@ -1,20 +1,40 @@
 import {
-  requireSession,
   readCatalog,
   saveEntry,
+  deleteEntry,
   assertSameOrigin,
   failure,
   json,
   HttpError,
 } from '@/lib/server';
+import { requireCmsAccess } from '@/lib/cms-access';
 import { schemas } from '@/lib/validation';
-import { descendants, trail } from '@/lib/catalog';
-import { ROOTS, type Entity } from '@/lib/types';
+import { descendants, trail, folderDeleteBlockers } from '@/lib/catalog';
+import type { Entity } from '@/lib/types';
+
 export async function POST(request: Request) {
   try {
     assertSameOrigin(request);
-    await requireSession(true);
-    const { entity, payload, originFolder, expectedVersion } = await request.json();
+    await requireCmsAccess();
+    const body = await request.json();
+
+    if (body.action === 'delete') {
+      const entity = body.entity as Entity;
+      const id = String(body.id || '');
+      if (!Object.hasOwn(schemas, entity)) throw new HttpError(400, '不支援的資料類型。');
+      const data = await readCatalog();
+      if (entity === 'folder') {
+        const folder = data.folders.find((f) => f.id === id);
+        if (!folder) throw new HttpError(404, '找不到此資料夾。');
+        const blockers = folderDeleteBlockers(data, id);
+        if (blockers.length)
+          throw new HttpError(400, `無法刪除：${blockers.join('、')}。請先清空後再試。`);
+      }
+      await deleteEntry(entity, id);
+      return json({ ok: true });
+    }
+
+    const { entity, payload, originFolder, expectedVersion } = body;
     if (!Object.hasOwn(schemas, entity)) throw new HttpError(400, '不支援的資料類型。');
     const parsed = schemas[entity as Entity].safeParse(payload);
     if (!parsed.success)
@@ -39,17 +59,24 @@ export async function POST(request: Request) {
       value.updatedAt = new Date().toISOString();
     }
     if (entity === 'folder' && 'parentId' in value) {
-      if (
-        (ROOTS as readonly string[]).includes(value.id) ||
-        !value.parentId ||
-        !data.folders.some((f) => f.id === value.parentId)
-      )
-        throw new HttpError(400, '五個主目錄不可更改，只可新增或編輯子目錄。');
-      if (
-        descendants(data.folders, value.id).has(value.parentId) ||
-        trail(data.folders, value.parentId).length >= 12
-      )
-        throw new HttpError(400, '資料夾層級無效或過深。');
+      const existing = data.folders.find((f) => f.id === value.id);
+      if (value.parentId) {
+        if (!data.folders.some((f) => f.id === value.parentId))
+          throw new HttpError(400, '上層資料夾不存在。');
+        if (value.parentId === value.id) throw new HttpError(400, '資料夾不能成為自己的上層。');
+        if (descendants(data.folders, value.id).has(value.parentId))
+          throw new HttpError(400, '資料夾層級無效。');
+        if (trail(data.folders, value.parentId).length >= 12)
+          throw new HttpError(400, '資料夾層級過深。');
+      } else {
+        if (existing && existing.parentId) throw new HttpError(400, '不可將子目錄改為主目錄。');
+        if (
+          data.folders.some(
+            (f) => !f.parentId && f.name === value.name && f.id !== value.id,
+          )
+        )
+          throw new HttpError(400, '主目錄名稱已存在。');
+      }
     }
     await saveEntry(entity, value, expectedVersion);
     return json({ ok: true, value });

@@ -46,22 +46,26 @@ test('folder browsing renders three labelled cards with live immediate-child cou
   const data = initialCatalog(true);
   const html = render(data, 'housing');
   assert.equal((html.match(/class="directory-entry folder-tile"/g) || []).length, 3);
-  for (const name of ['私樓', '公居屋', '簡易房']) {
-    assert.ok(html.includes(`<strong>${name}</strong><small>3 個資料夾 · 0 項內容</small>`));
-  }
+  assert.ok(
+    html.includes('<strong>私人屋苑</strong><small>2 個資料夾 · 36 項內容</small>'),
+  );
+  assert.ok(html.includes('<strong>公居屋</strong><small>0 個資料夾 · 10 項內容</small>'));
+  assert.ok(html.includes('<strong>簡約公屋</strong><small>0 個資料夾 · 3 項內容</small>'));
   assert.equal((html.match(/class="folder-tile-icon" aria-hidden="true"/g) || []).length, 3);
 });
 
 test('folder content counts exclude drafts, archived items and deeper descendants', () => {
   const data = initialCatalog(true);
-  const content = data.contents[0];
-  data.contents = [
-    { ...content, id: 'published', folderId: 'private', status: 'published' },
-    { ...content, id: 'draft', folderId: 'private', status: 'draft' },
-    { ...content, id: 'archived', folderId: 'private', status: 'archived' },
-    { ...content, id: 'descendant', folderId: 'unit-a', status: 'published' },
-  ];
+  const template = data.contents.find((item) => item.id === 'kit-a')!;
+  data.contents.push(
+    { ...template, id: 'published', folderId: 'private', status: 'published', name: 'Published' },
+    { ...template, id: 'draft', folderId: 'private', status: 'draft', name: 'Draft' },
+    { ...template, id: 'archived', folderId: 'private', status: 'archived', name: 'Archived' },
+    { ...template, id: 'descendant', folderId: 'unit-a', status: 'published', name: 'Descendant' },
+  );
   assert.ok(
-    render(data, 'housing').includes('<strong>私樓</strong><small>3 個資料夾 · 1 項內容</small>'),
+    render(data, 'housing').includes(
+      '<strong>私人屋苑</strong><small>2 個資料夾 · 37 項內容</small>',
+    ),
   );
 });

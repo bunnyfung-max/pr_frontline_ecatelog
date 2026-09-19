@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="842" height="1191" viewBox="0 0 842 1191">
+  <defs><linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f4efe4"/><stop offset="100%" stop-color="#e8efe2"/></linearGradient></defs>
+  <rect width="842" height="1191" fill="url(#sky)"/>
+  <rect x="48" y="48" width="746" height="1095" rx="8" fill="#fff" stroke="#d8ddd0" stroke-width="2"/>
+  <text x="72" y="96" font-size="11" letter-spacing="3" fill="#50b748" font-family="sans-serif">SALES KIT - RENDER 01</text>
+  <text x="72" y="142" font-size="34" fill="#2d3a28" font-family="Microsoft JhengHei, sans-serif">效果圖 1</text>
+  <text x="72" y="178" font-size="14" fill="#7a8572" font-family="Microsoft JhengHei, sans-serif">客廳空間氛圍示意</text>
+  <rect x="72" y="220" width="698" height="760" rx="12" fill="#dfe8d4"/>
+  <rect x="120" y="500" width="320" height="120" rx="16" fill="#f48120" opacity="0.85"/>
+  <rect x="500" y="420" width="180" height="220" rx="8" fill="#fff" opacity="0.9"/>
+  <text x="280" y="575" font-size="22" fill="#fff" text-anchor="middle" font-family="Microsoft JhengHei, sans-serif">梳化區</text>
+  <text x="590" y="540" font-size="18" fill="#5f6a58" text-anchor="middle" font-family="Microsoft JhengHei, sans-serif">收納櫃</text>
+  <text x="72" y="1128" font-size="11" fill="#9aa18f" font-family="sans-serif">PRICERITE FRONTLINE - DEMO - 02 / RENDER</text>
+</svg>

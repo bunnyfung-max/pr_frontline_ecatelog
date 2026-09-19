@@ -37,6 +37,8 @@ test('Postgres migration and RLS: anonymous, unapproved, frontline and admin bou
           type: 'pdf',
           folderId: 'housing',
           files: [`asset:${status}.pdf`],
+          tags: [],
+          eshopProducts: [],
           productIds: [],
         }),
       ]);
@@ -69,12 +71,13 @@ test('Postgres migration and RLS: anonymous, unapproved, frontline and admin bou
     assert.equal((await db.query('select * from public.catalog_entries')).rows.length, 0);
     await db.query("select set_config('request.jwt.claim.sub',$1,false)", [staff]);
     const rows = await db.query<{ id: string }>(
-      "select id from public.catalog_entries where entity='content'",
+      "select id from public.catalog_entries where entity='content' order by id",
     );
-    assert.deepEqual(
-      rows.rows.map((r) => r.id),
-      ['published'],
-    );
+    const visible = rows.rows.map((r) => r.id);
+    assert.equal(visible.includes('published'), true);
+    assert.equal(visible.includes('draft'), false);
+    assert.equal(visible.includes('archived'), false);
+    assert.equal(visible.length, 50);
     const kitRow = await db.query<{ payload: typeof kitLinks }>(
       "select payload from public.catalog_entries where entity='content' and id='published'",
     );
@@ -97,7 +100,7 @@ test('Postgres migration and RLS: anonymous, unapproved, frontline and admin bou
     await db.query("select set_config('request.jwt.claim.sub',$1,false)", [admin]);
     assert.equal(
       (await db.query("select * from public.catalog_entries where entity='content'")).rows.length,
-      3,
+      52,
     );
     await db.query('insert into storage.objects(bucket_id,name) values ($1,$2)', [
       'catalog',
@@ -129,6 +132,8 @@ test('Postgres migration and RLS: anonymous, unapproved, frontline and admin bou
           salesKit: true,
           folderId: 'housing',
           files: kitFiles,
+          tags: [],
+          eshopProducts: [],
           productIds: [],
         }),
       ],

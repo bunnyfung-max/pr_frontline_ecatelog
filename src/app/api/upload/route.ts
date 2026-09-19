@@ -2,7 +2,6 @@ import { randomUUID } from 'node:crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import {
-  requireSession,
   assertSameOrigin,
   demoEnabled,
   dataDirectory,
@@ -11,11 +10,12 @@ import {
   json,
   HttpError,
 } from '@/lib/server';
+import { requireCmsAccess } from '@/lib/cms-access';
 import { uploadSchema, mimeExtension } from '@/lib/validation';
 export async function POST(request: Request) {
   try {
     assertSameOrigin(request);
-    await requireSession(true);
+    await requireCmsAccess();
     if (demoEnabled()) {
       if (Number(request.headers.get('content-length')) > 51 * 1024 * 1024)
         throw new HttpError(413, '檔案不可超過 50 MB。');

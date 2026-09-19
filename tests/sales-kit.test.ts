@@ -13,7 +13,7 @@ import {
   previousReaderPage,
 } from '../src/lib/sales-kit';
 
-const base = initialCatalog(true).contents[0];
+const base = initialCatalog(true).contents.find((item) => item.id === 'kit-a')!;
 const images = ['asset:plan.png', 'asset:render.jpg', 'asset:list1.webp', 'asset:list2.png', ''];
 const kit = { ...base, salesKit: true, files: images };
 
@@ -23,9 +23,17 @@ test('kit slots retain roles when uploaded out of order, replaced or cleared', (
   assert.deepEqual(files, images);
   assert.equal(kitComplete(files), true);
   files = setKitSlot(files, 1, '');
-  assert.equal(kitComplete(files), false);
+  assert.equal(kitComplete(files), true);
   assert.equal(files[2], images[2]);
-  assert.deepEqual(setKitSlot(files, 1, images[1]), images);
+  files = setKitSlot(files, 0, '');
+  assert.equal(kitComplete(files), false);
+  assert.deepEqual(setKitSlot(files, 0, images[0]), [
+    images[0],
+    '',
+    images[2],
+    images[3],
+    images[4],
+  ]);
 });
 
 test('extras reorder only behind the five reserved image positions', () => {
@@ -36,18 +44,25 @@ test('extras reorder only behind the five reserved image positions', () => {
   assert.deepEqual(files, [...images, 'asset:a.pdf', 'asset:b.mp4']);
 });
 
-test('incomplete kit can be drafted, but publishing requires first four images only', () => {
+test('incomplete kit can be drafted, but publishing requires floor plan only', () => {
   assert.equal(
     schemas.content.safeParse({ ...kit, status: 'draft', files: kitFiles([]) }).success,
     true,
   );
-  for (let i = 0; i < 4; i++)
+  assert.equal(
+    schemas.content.safeParse({ ...kit, files: setKitSlot(images, 0, '') }).success,
+    false,
+  );
+  for (let i = 1; i < 4; i++)
     assert.equal(
       schemas.content.safeParse({ ...kit, files: setKitSlot(images, i, '') }).success,
-      false,
+      true,
     );
   assert.equal(schemas.content.safeParse(kit).success, true);
-  assert.equal(schemas.content.safeParse({ ...kit, files: images.slice(0, 4) }).success, false);
+  assert.equal(
+    schemas.content.safeParse({ ...kit, files: [images[0], '', '', '', ''] }).success,
+    true,
+  );
 });
 
 test('fixed slots are images; extras support PDF/video and reject unsafe or empty refs', () => {
@@ -79,14 +94,20 @@ test('fixed slots are images; extras support PDF/video and reject unsafe or empt
 });
 
 test('legacy kits and ordinary image, PDF, video and link content keep their original format', () => {
-  assert.equal(schemas.content.safeParse(base).success, true);
+  const legacy = {
+    ...base,
+    salesKit: false,
+    files: ['/demo/sales-kit-floorplan.svg'],
+    cover: '',
+  };
+  assert.equal(schemas.content.safeParse(legacy).success, true);
   assert.deepEqual(
-    readerAssets(base).map((a) => a.ref),
-    base.files,
+    readerAssets(legacy).map((a) => a.ref),
+    legacy.files,
   );
-  assert.deepEqual(kitFiles(base.files).slice(0, base.files.length), base.files);
+  assert.deepEqual(kitFiles(legacy.files).slice(0, legacy.files.length), legacy.files);
   assert.equal(
-    schemas.content.safeParse({ ...base, files: [...base.files, 'asset:extra.pdf'] }).success,
+    schemas.content.safeParse({ ...legacy, files: [...legacy.files, 'asset:extra.pdf'] }).success,
     false,
   );
   for (const [type, file] of [
@@ -94,7 +115,7 @@ test('legacy kits and ordinary image, PDF, video and link content keep their ori
     ['video', 'asset:a.mp4'],
     ['link', 'https://example.com'],
   ])
-    assert.equal(schemas.content.safeParse({ ...base, type, files: [file] }).success, true);
+    assert.equal(schemas.content.safeParse({ ...legacy, type, files: [file] }).success, true);
 });
 
 const mixed = () =>

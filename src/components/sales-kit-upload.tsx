@@ -6,6 +6,7 @@ import { upload } from '@/lib/client';
 import {
   IMAGE_MIMES,
   KIT_MIMES,
+  KIT_PREVIEW_LABELS,
   KIT_RESERVED,
   KIT_SLOTS,
   MAX_KIT_FILES,
@@ -15,6 +16,18 @@ import {
   setKitSlot,
 } from '@/lib/sales-kit';
 import { Thumb } from './ui';
+
+function KitSlotThumb({ index, src }: { index: number; src: string }) {
+  const label = KIT_PREVIEW_LABELS[index] ?? `圖 ${index + 1}`;
+  if (!src || src.startsWith('/demo/sales-kit-')) {
+    return (
+      <div className="kit-slot-preview" aria-label={`${label}預覽`}>
+        <span>{label}</span>
+      </div>
+    );
+  }
+  return <Thumb src={src} alt={`${label}預覽`} fallbackLabel={label} />;
+}
 
 export function SalesKitUpload({
   value,
@@ -77,11 +90,11 @@ export function SalesKitUpload({
     <section className="kit-upload" aria-label="Sales Kit 檔案及展示次序">
       <div className="kit-upload-heading">
         <h3>Sales Kit 展示次序</h3>
-        <p>頭 4 張用途固定；第 5 張選填。前端依下列次序展示。</p>
+        <p>平面圖發布時必填；效果圖及產品列表位置選填。前端依下列次序展示。</p>
       </div>
       {legacy && (
         <p className="notice">
-          原有圖片暫按舊次序放入下列位置，請核對用途並補齊頭 4 張。儲存前不會改動原有內容。
+          原有圖片暫按舊次序放入下列位置，請核對用途並補齊平面圖。儲存前不會改動原有內容。
         </p>
       )}
       <ol className="kit-slots">
@@ -89,11 +102,17 @@ export function SalesKitUpload({
           <li key={label} className={`kit-slot ${files[i] ? 'has-file' : ''}`}>
             <span className="kit-number">{i + 1}</span>
             <div className="kit-thumb">
-              <Thumb src={files[i]} alt={`${label}預覽`} />
+              <KitSlotThumb index={i} src={files[i]} />
             </div>
             <div className="kit-slot-body">
               <strong>{label}</strong>
-              <small>{i < 4 ? '發布時必填 · 固定位置' : '選填 · 無固定用途'}</small>
+              <small>
+                {i === 0
+                  ? '發布時必填 · 固定位置'
+                  : i < KIT_RESERVED - 1
+                    ? '選填 · 固定位置'
+                    : '選填 · 無固定用途'}
+              </small>
               <div className="kit-slot-actions">
                 <label className="kit-file-button">
                   {files[i] ? '替換圖片' : '選擇圖片'}

@@ -12,15 +12,225 @@ import {
   Image as ImageIcon,
   ArrowLeft,
 } from 'lucide-react';
-import type { Catalog, Content, ContentType, Product, Offer, Scene, Status } from '@/lib/types';
+import type {
+  Catalog,
+  Content,
+  ContentType,
+  EshopProductLink,
+  Product,
+  Offer,
+  Scene,
+  Status,
+} from '@/lib/types';
 import { TYPE_LABEL } from '@/lib/types';
 import { descendants, trail, byOrder } from '@/lib/catalog';
-import { save, upload } from '@/lib/client';
+import { api, save, upload } from '@/lib/client';
+import { isPriceriteProductUrl } from '@/lib/pricerite-eshop-url';
 import { Modal, Thumb, Empty } from './ui';
 import { Viewer } from './viewer';
 import { SalesKitUpload } from './sales-kit-upload';
 import { kitFiles, kitComplete } from '@/lib/sales-kit';
 const makeId = () => crypto.randomUUID();
+function normalizeTag(raw: string) {
+  return raw.trim().normalize('NFKC');
+}
+function TagField({
+  tags,
+  onChange,
+}: {
+  tags: string[];
+  onChange: (tags: string[]) => void;
+}) {
+  const [input, setInput] = useState('');
+  const add = (raw: string) => {
+    const tag = normalizeTag(raw);
+    if (!tag || tag.length > 50 || tags.includes(tag) || tags.length >= 30) return;
+    onChange([...tags, tag]);
+    setInput('');
+  };
+  return (
+    <label>
+      標籤
+      <div className="tag-field">
+        {tags.length > 0 && (
+          <div className="tag-list">
+            {tags.map((tag) => (
+              <span className="tag-chip" key={tag}>
+                {tag}
+                <button
+                  type="button"
+                  className="tag-chip-remove"
+                  aria-label={`移除標籤 ${tag}`}
+                  onClick={() => onChange(tags.filter((item) => item !== tag))}
+                >
+                  <X size={14} />
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+        <input
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              add(input);
+            }
+          }}
+          placeholder="輸入標籤後按 Enter 新增"
+          maxLength={50}
+        />
+      </div>
+      <small>可任意新增，用於分類、搜尋及展示。每個標籤最多 50 字，最多 30 個。</small>
+    </label>
+  );
+}
+function EshopProductField({
+  products,
+  onChange,
+  onError,
+}: {
+  products: EshopProductLink[];
+  onChange: (products: EshopProductLink[]) => void;
+  onError: (message: string) => void;
+}) {
+  const [input, setInput] = useState('');
+  const [busy, setBusy] = useState(false);
+  const add = async () => {
+    const url = input.trim();
+    onError('');
+    if (!url) return;
+    if (!isPriceriteProductUrl(url)) {
+      onError('只接受 Pricerite eShop 產品 HTTPS 連結。');
+      return;
+    }
+    if (products.some((item) => item.url === url)) {
+      onError('此產品連結已加入。');
+      return;
+    }
+    if (products.length >= 30) {
+      onError('每份內容最多 30 個產品連結。');
+      return;
+    }
+    setBusy(true);
+    try {
+      const snapshot = await api<EshopProductLink & { priceLabel?: string }>('/api/eshop-product', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      });
+      onChange([
+        ...products,
+        {
+          url: snapshot.url,
+          title: snapshot.title,
+          brand: snapshot.brand,
+          sku: snapshot.sku,
+          description: snapshot.description,
+          image: snapshot.image,
+          fetchedAt: snapshot.fetchedAt,
+        },
+      ]);
+      setInput('');
+    } catch (error) {
+      onError(error instanceof Error ? error.message : '無法讀取產品資料。');
+    } finally {
+      setBusy(false);
+    }
+  };
+  const refresh = async (url: string) => {
+    onError('');
+    setBusy(true);
+    try {
+      const snapshot = await api<EshopProductLink & { priceLabel?: string }>('/api/eshop-product', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      });
+      onChange(
+        products.map((item) =>
+          item.url === url
+            ? {
+                url: snapshot.url,
+                title: snapshot.title,
+                brand: snapshot.brand,
+                sku: snapshot.sku,
+                description: snapshot.description,
+                image: snapshot.image,
+                fetchedAt: snapshot.fetchedAt,
+              }
+            : item,
+        ),
+      );
+    } catch (error) {
+      onError(error instanceof Error ? error.message : '無法更新產品資料。');
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="eshop-product-field">
+      <label>
+        eShop 產品連結
+        <div className="eshop-product-input-row">
+          <input
+            type="url"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                void add();
+              }
+            }}
+            placeholder="https://www.pricerite.com.hk/hk/zh-hk/products/..."
+            maxLength={2000}
+            disabled={busy}
+          />
+          <button type="button" className="secondary" onClick={() => void add()} disabled={busy || !input.trim()}>
+            {busy ? '讀取中…' : '加入'}
+          </button>
+        </div>
+      </label>
+      <small>貼上 eShop 產品連結後會自動讀取產品名稱、品牌及編號，並用於搜尋。展示時會即時顯示最新價格。</small>
+      {products.length > 0 && (
+        <div className="eshop-product-list">
+          {products.map((product) => (
+            <article className="eshop-product-item" key={product.url}>
+              <div className="eshop-product-copy">
+                <strong>{product.title}</strong>
+                <small>
+                  {[product.brand, product.sku].filter(Boolean).join(' · ') || product.url}
+                </small>
+              </div>
+              <div className="eshop-product-actions">
+                <button
+                  type="button"
+                  className="icon-btn"
+                  aria-label={`更新 ${product.title}`}
+                  onClick={() => void refresh(product.url)}
+                  disabled={busy}
+                >
+                  <UploadCloud size={16} />
+                </button>
+                <button
+                  type="button"
+                  className="icon-btn"
+                  aria-label={`移除 ${product.title}`}
+                  onClick={() => onChange(products.filter((item) => item.url !== product.url))}
+                  disabled={busy}
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            </article>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 export function ContentEditor({
   data,
   folderId,
@@ -38,21 +248,28 @@ export function ContentEditor({
 }) {
   const housing = trail(data.folders, folderId).some((folder) => folder.id === 'housing');
   const [value, setValue] = useState<Content>(() => {
-    const initial: Content = content || {
-      id: makeId(),
-      folderId,
-      name: '',
-      type: 'image',
-      files: [],
-      fileName: '',
-      cover: '',
-      keywords: '',
-      productIds: [],
-      storeUrl: '',
-      eshopUrl: '',
-      status: 'draft',
-      order: 0,
-      updatedAt: '',
+    const initial: Content = {
+      ...(content || {
+        id: makeId(),
+        folderId,
+        name: '',
+        type: 'image',
+        files: [],
+        fileName: '',
+        cover: '',
+        keywords: '',
+        tags: [],
+        eshopProducts: [],
+        productIds: [],
+        storeUrl: '',
+        eshopUrl: '',
+        status: 'draft',
+        order: 0,
+        updatedAt: '',
+      }),
+      tags: content?.tags ?? [],
+      eshopProducts: content?.eshopProducts ?? [],
+      productIds: content?.productIds ?? [],
     };
     return housing && initial.type === 'image'
       ? { ...initial, salesKit: true, files: kitFiles(initial.files) }
@@ -62,7 +279,6 @@ export function ContentEditor({
   const [error, setError] = useState('');
   const [uploading, setUploading] = useState(false);
   const [preview, setPreview] = useState<'landscape' | 'portrait' | null>(null);
-  const [productQuery, setProductQuery] = useState('');
   const destinations = descendants(data.folders, folderId);
   const update = <K extends keyof Content>(key: K, v: Content[K]) =>
     setValue((old) => ({ ...old, [key]: v }));
@@ -335,47 +551,15 @@ export function ContentEditor({
                   maxLength={2000}
                 />
               </label>
-              <label>
-                相關產品
-                <input
-                  value={productQuery}
-                  onChange={(e) => setProductQuery(e.target.value)}
-                  placeholder="搜尋產品索引"
-                />
-              </label>
-              <div className="product-picker">
-                {data.products
-                  .filter((p) =>
-                    `${p.name} ${p.code}`.toLowerCase().includes(productQuery.toLowerCase()),
-                  )
-                  .map((p) => (
-                    <label key={p.id}>
-                      <input
-                        type="checkbox"
-                        checked={value.productIds.includes(p.id)}
-                        onChange={(e) =>
-                          update(
-                            'productIds',
-                            e.target.checked
-                              ? [...value.productIds, p.id]
-                              : value.productIds.filter((id) => id !== p.id),
-                          )
-                        }
-                      />
-                      <span>
-                        {p.name}
-                        <small>
-                          {[p.code, p.brand, p.colour, p.style].filter(Boolean).join(' · ')}
-                        </small>
-                      </span>
-                    </label>
-                  ))}
-                {!data.products.length && <p className="muted">請先在「產品索引」新增產品。</p>}
-              </div>
-              <small className="muted">搜尋會比對已關聯產品的名稱、品牌、顏色及風格。</small>
+              <TagField tags={value.tags ?? []} onChange={(tags) => update('tags', tags)} />
+              <EshopProductField
+                products={value.eshopProducts ?? []}
+                onChange={(eshopProducts) => update('eshopProducts', eshopProducts)}
+                onError={setError}
+              />
               <div className="purchase-fields" role="group" aria-label="本份內容的購物連結">
                 <h3>本份內容 / Sales Kit 專屬購物連結</h3>
-                <p className="muted">選填。只用於本份內容；相關產品會使用各自的購物連結。</p>
+                <p className="muted">選填。只用於本份內容；標籤不會自動帶出購物連結。</p>
                 <label>
                   自在購連結（本份內容）
                   <input

@@ -8,10 +8,17 @@ import {
   supabase,
   HttpError,
 } from '@/lib/server';
+import {
+  clearCmsUnlock,
+  isCmsUnlocked,
+  setCmsUnlocked,
+  verifyCmsPassword,
+} from '@/lib/cms-access';
 export async function GET() {
   if (!configured() && !demoEnabled()) return json({ setup: true });
   try {
-    return json({ session: await requireSession() });
+    const session = await requireSession();
+    return json({ session, cmsUnlocked: await isCmsUnlocked() });
   } catch (e) {
     return failure(e);
   }
@@ -20,8 +27,19 @@ export async function POST(request: Request) {
   try {
     assertSameOrigin(request);
     const { email, password, action } = await request.json();
+    if (action === 'lock-cms') {
+      await clearCmsUnlock();
+      return json({ cmsUnlocked: false });
+    }
+    if (action === 'unlock-cms') {
+      const session = await requireSession(true);
+      await verifyCmsPassword(password, session);
+      await setCmsUnlocked();
+      return json({ cmsUnlocked: true, session });
+    }
     const sb = await supabase();
     if (action === 'logout') {
+      await clearCmsUnlock();
       await sb.auth.signOut();
       return json({ ok: true });
     }

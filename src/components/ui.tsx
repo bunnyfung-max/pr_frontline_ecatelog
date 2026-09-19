@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { X, Image as ImageIcon, ArrowUpRight, ChevronRight, Home, FolderOpen } from 'lucide-react';
 import type { Folder } from '@/lib/types';
 import { assetUrl } from '@/lib/client';
@@ -8,26 +8,35 @@ export function Thumb({
   src,
   alt = '',
   className = '',
+  fallbackLabel = '內容預覽',
 }: {
   src: string;
   alt?: string;
   className?: string;
+  fallbackLabel?: string;
 }) {
-  return src ? (
-    <img
-      className={className}
-      src={assetUrl(src)}
-      alt={alt}
-      loading="lazy"
-      onError={(e) => {
-        e.currentTarget.style.visibility = 'hidden';
-        e.currentTarget.parentElement?.classList.add('image-unavailable');
-      }}
-    />
-  ) : (
-    <div className={`placeholder ${className}`}>
-      <ImageIcon size={34} strokeWidth={1.2} />
-      <span>內容預覽</span>
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    setFailed(false);
+  }, [src]);
+  if (!src) {
+    return (
+      <div className={`placeholder ${className}`}>
+        <ImageIcon size={34} strokeWidth={1.2} />
+        <span>{fallbackLabel}</span>
+      </div>
+    );
+  }
+  if (failed) {
+    return (
+      <div className={`thumb thumb-fallback ${className}`}>
+        <span>{fallbackLabel}</span>
+      </div>
+    );
+  }
+  return (
+    <div className={`thumb ${className}`}>
+      <img src={assetUrl(src)} alt={alt} loading="lazy" onError={() => setFailed(true)} />
     </div>
   );
 }

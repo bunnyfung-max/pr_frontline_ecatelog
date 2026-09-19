@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { mkdir } from 'node:fs/promises';
+import { unlockCms } from './helpers';
 test('five entry points, hierarchy and branch-scoped attribute search', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
@@ -10,8 +11,7 @@ test('five entry points, hierarchy and branch-scoped attribute search', async ({
   await mkdir('qa', { recursive: true });
   await page.screenshot({ path: 'qa/home-desktop.png', fullPage: true });
   await page.getByRole('button', { name: /新屋入伙.*New Housing.*個資料夾/ }).click();
-  await page.getByRole('button', { name: /^私樓 \d+ 個資料夾/ }).click();
-  await page.getByRole('button', { name: /^九龍 \d+ 個資料夾/ }).click();
+  await page.getByRole('button', { name: /^私人屋苑 \d+ 個資料夾/ }).click();
   await page.getByRole('button', { name: /^示例屋苑 A \d+ 個資料夾/ }).click();
   await expect(page.getByRole('heading', { name: '示例屋苑 A', exact: true })).toBeVisible();
   await expect(page.locator('.search-bar .scope-tag')).toHaveCount(0);
@@ -33,11 +33,15 @@ test('viewer rotates, retains page and panel state, odd final page is single', a
   await expect(page.locator('.paper')).toHaveCount(2);
   await page.screenshot({ path: 'qa/viewer-landscape.png', fullPage: true });
   await page.getByRole('button', { name: '下一頁' }).click();
+  await expect(page.locator('.paper')).toHaveCount(2);
+  await expect(page.locator('.paper').first()).toHaveAttribute('data-page', '3');
+  await page.getByRole('button', { name: '下一頁' }).click();
   await expect(page.locator('.paper')).toHaveCount(1);
-  await expect(page.locator('.paper')).toHaveAttribute('data-page', '3');
+  await expect(page.locator('.paper')).toHaveAttribute('data-page', '5');
+  await page.getByRole('button', { name: '上一頁' }).click();
   await page.getByRole('button', { name: '購物功能列', exact: true }).click();
   await expect(page.getByText('把靈感，帶回家。')).toBeVisible();
-  await expect(page.locator('.paper')).toHaveAttribute('data-page', '3');
+  await expect(page.locator('.paper').first()).toHaveAttribute('data-page', '3');
   await page.getByRole('button', { name: '上一頁' }).click();
   await page.screenshot({ path: 'qa/viewer-panel.png', fullPage: true });
   await page.setViewportSize({ width: 768, height: 1024 });
@@ -59,6 +63,7 @@ test('CMS selects descendant destination, uploads, previews, publishes and unpub
 }) => {
   const name = `QA 圖片 ${Date.now()}`;
   await page.goto('/?folder=estate-a&cms=1');
+  await unlockCms(page);
   await page.getByRole('button', { name: '上載內容' }).click();
   const destination = page.getByLabel('上載目的地', { exact: false });
   await expect(destination.locator('option')).toHaveCount(2);
@@ -88,6 +93,7 @@ test('CMS selects descendant destination, uploads, previews, publishes and unpub
   await expect(page.getByRole('heading', { name: '450–550 呎 / 2–3 人' })).toBeVisible();
   await expect(page.getByRole('heading', { name, exact: true })).toHaveCount(0);
   await page.goto('/?folder=unit-a&cms=1');
+  await unlockCms(page);
   await page
     .getByRole('row')
     .filter({ hasText: name })
@@ -98,6 +104,7 @@ test('CMS selects descendant destination, uploads, previews, publishes and unpub
   await page.goto('/?folder=unit-a');
   await expect(page.getByRole('heading', { name, exact: true })).toBeVisible();
   await page.goto('/?folder=unit-a&cms=1');
+  await unlockCms(page);
   await page
     .getByRole('row')
     .filter({ hasText: name })
@@ -111,7 +118,13 @@ test('CMS selects descendant destination, uploads, previews, publishes and unpub
   await expect(page.getByRole('heading', { name, exact: true })).toHaveCount(0);
 });
 test('API rejects cross-origin writes and sibling upload destinations', async ({ request }) => {
-  const r = await request.get('/api/catalog?cms=1');
+  const locked = await request.get('/api/catalog?cms=1');
+  expect(locked.status()).toBe(403);
+  const r = await request.post('/api/session', {
+    headers: { Origin: 'http://127.0.0.1:3000' },
+    data: { action: 'unlock-cms', password: 'Abc123' },
+  });
+  expect(r.ok()).toBeTruthy();
   const data = await r.json();
   const content = {
     ...data.contents.find((c: { id: string }) => c.id === 'kit-a'),
@@ -171,11 +184,15 @@ test('homepage searches all roots, retains query after viewing; CMS remains avai
   await page.getByRole('button', { name: '清除', exact: true }).click();
   await expect(page.locator('.directory-entry')).toHaveCount(5);
   await page.getByRole('button', { name: '內容管理', exact: true }).click();
+  await expect(page.getByRole('heading', { name: '進入內容管理' })).toBeVisible();
+  await unlockCms(page);
   await expect(page.getByRole('heading', { name: '選擇管理目錄' })).toBeVisible();
   await expect(page.locator('.sidebar')).toBeVisible();
   await page.getByRole('button', { name: '返回展示', exact: true }).click();
   await expect(page.getByRole('heading', { name: '想找甚麼銷售資料？' })).toBeVisible();
   await expect(page.locator('.sidebar')).toHaveCount(0);
+  await page.getByRole('button', { name: '內容管理', exact: true }).click();
+  await expect(page.getByRole('heading', { name: '進入內容管理' })).toBeVisible();
 });
 
 test('PDF uploads and renders two real canvas pages with an odd last page', async ({
@@ -225,6 +242,8 @@ test('PDF uploads and renders two real canvas pages with an odd last page', asyn
         fileName: 'qa.pdf',
         cover: '',
         keywords: 'QA驗收',
+        tags: [],
+        eshopProducts: [],
         productIds: [],
         status: 'published',
         order: 99,
@@ -243,6 +262,10 @@ test('PDF uploads and renders two real canvas pages with an odd last page', asyn
 });
 
 test.afterAll(async ({ request }) => {
+  await request.post('/api/session', {
+    headers: { Origin: 'http://127.0.0.1:3000' },
+    data: { action: 'unlock-cms', password: 'Abc123' },
+  });
   const response = await request.get('/api/catalog?cms=1');
   const data = await response.json();
   // Archive only this suite's explicit QA fixtures; preserve seed and user entries.

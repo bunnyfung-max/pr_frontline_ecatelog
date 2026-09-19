@@ -1,0 +1,1 @@
+export const DEMO_CMS_PASSWORD_DEFAULT = 'Abc123';

@@ -17,7 +17,7 @@ test('product saves distinct links and preserves legacy eShop URL', () => {
 });
 
 test('content accepts independent kit links, old records and clearing links', () => {
-  const content = initialCatalog(true).contents[0];
+  const content = initialCatalog(true).contents.find((item) => item.id === 'kit-a')!;
   const legacy = schemas.content.parse(content);
   assert.equal(legacy.storeUrl, '');
   assert.equal(legacy.eshopUrl, '');
@@ -49,56 +49,52 @@ test('API schemas reject unsafe links in each product and kit field', () => {
       );
     for (const field of ['storeUrl', 'eshopUrl'])
       assert.equal(
-        schemas.content.safeParse({ ...data.contents[0], [field]: invalid }).success,
+        schemas.content.safeParse({ ...data.contents.find((item) => item.id === 'kit-a')!, [field]: invalid }).success,
         false,
       );
   }
 });
 
-test('viewer keeps kit/product destinations separate and excludes unrelated products', () => {
+test('viewer shows content links, tags and cached eShop products without unrelated product cards', () => {
   const data = initialCatalog(true);
   const content = {
-    ...data.contents[0],
+    ...data.contents.find((item) => item.id === 'kit-a')!,
     storeUrl: 'https://example.com/store/kit',
     eshopUrl: 'https://example.com/eshop/kit',
+    tags: ['米白色', '梳化'],
+    productIds: [],
   };
   data.products[0] = {
     ...data.products[0],
     storeUrl: 'https://example.com/store/sofa',
     url: 'https://example.com/eshop/sofa',
   };
-  data.products[1] = {
-    ...data.products[1],
-    storeUrl: 'https://example.com/store/desk',
-    url: 'https://example.com/eshop/desk',
-  };
   const html = renderToStaticMarkup(
     createElement(ContentShoppingLinks, { content, products: data.products }),
   );
-  for (const url of [
-    content.storeUrl,
-    content.eshopUrl,
-    data.products[0].storeUrl,
-    data.products[0].url,
-  ])
+  for (const url of [content.storeUrl, content.eshopUrl])
     assert.ok(html.includes(`href="${url}"`));
   assert.equal((html.match(/<a /g) || []).length, 4);
-  assert.equal(html.includes('https://example.com/store/desk'), false);
-  assert.equal(html.includes('https://example.com/eshop/desk'), false);
-  assert.equal((html.match(/rel="noopener noreferrer"/g) || []).length, 4);
+  assert.ok(html.includes('米白色'));
+  assert.ok(html.includes('梳化'));
+  assert.ok(html.includes('eShop 產品'));
+  assert.ok(html.includes('RIVO 雙趟門三櫃桶衣櫃'));
+  assert.equal(html.includes('https://example.com/store/sofa'), false);
 });
 
-test('missing kit links do not borrow product links or legacy shared settings', () => {
+test('missing kit links still show tags and never borrow legacy shared settings', () => {
   const data = initialCatalog(true);
   data.settings.url = 'https://example.com/obsolete-global';
-  data.products[0].url = 'https://example.com/sofa';
   const html = renderToStaticMarkup(
-    createElement(ContentShoppingLinks, { content: data.contents[0], products: data.products }),
+    createElement(ContentShoppingLinks, {
+      content: data.contents.find((item) => item.id === 'kit-a')!,
+      products: data.products,
+    }),
   );
   const kitSection = html.split('</section>')[0];
   assert.ok(kitSection.includes('購物連結待設定'));
   assert.equal(kitSection.includes('href='), false);
-  assert.ok(html.includes('href="https://example.com/sofa"'));
+  assert.ok(html.includes('米白色'));
   assert.equal(html.includes('obsolete-global'), false);
 });
 

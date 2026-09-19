@@ -18,6 +18,13 @@ export function save(
     body: JSON.stringify({ entity, payload, originFolder, expectedVersion }),
   });
 }
+export function remove(entity: Entity, id: string) {
+  return api('/api/save', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'delete', entity, id }),
+  });
+}
 export const assetUrl = (ref: string) =>
   ref.startsWith('asset:') ? `/api/asset?ref=${encodeURIComponent(ref)}` : ref;
 export async function upload(file: File, demo: boolean): Promise<string> {

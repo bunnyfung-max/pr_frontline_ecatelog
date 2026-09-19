@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { isPriceriteProductUrl } from './pricerite-eshop-url';
 import { KIT_RESERVED, KIT_REQUIRED } from './sales-kit';
 export const idSchema = z.string().regex(/^[a-zA-Z0-9_-]{1,100}$/);
 export const httpsUrl = z
@@ -19,11 +20,22 @@ export const assetRef = z
     (v) =>
       !v ||
       /^asset:[a-zA-Z0-9_/-]+\.(jpg|jpeg|png|webp|pdf|mp4|webm)$/.test(v) ||
-      /^\/demo\/(plan|living|details)\.svg$/.test(v),
+      /^\/demo\/(?:plan|living|details|housing-floorplan|sales-kit-(?:floorplan|render-[12]|product-[12]))\.svg$/.test(
+        v,
+      ),
     '不支援的檔案位置',
   );
 const name = z.string().trim().min(1, '請輸入名稱').max(200);
 const image = assetRef;
+const eshopProductLink = z.object({
+  url: httpsUrl.refine(isPriceriteProductUrl, '只接受 Pricerite eShop 產品 HTTPS 連結'),
+  title: z.string().max(300),
+  brand: z.string().max(100),
+  sku: z.string().max(100),
+  description: z.string().max(4000),
+  image: httpsUrl.or(z.literal('')),
+  fetchedAt: z.string(),
+});
 export const schemas = {
   content: z
     .object({
@@ -36,6 +48,11 @@ export const schemas = {
       fileName: z.string().max(1000),
       cover: image,
       keywords: z.string().max(2000),
+      tags: z
+        .array(z.string().trim().min(1, '標籤不可為空白').max(50))
+        .max(30)
+        .default([]),
+      eshopProducts: z.array(eshopProductLink).max(30).default([]),
       productIds: z.array(idSchema).max(200),
       storeUrl: httpsUrl.default(''),
       eshopUrl: httpsUrl.default(''),

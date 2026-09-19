@@ -31,6 +31,17 @@ export function trail(folders: Folder[], id: string): Folder[] {
 }
 export const byOrder = <T extends { order: number; name?: string }>(a: T, b: T) =>
   a.order - b.order || (a.name || '').localeCompare(b.name || '', 'zh-HK');
+export const rootFolders = (data: Catalog) =>
+  data.folders.filter((f) => !f.parentId).sort(byOrder);
+export function folderDeleteBlockers(data: Catalog, id: string): string[] {
+  const folder = data.folders.find((f) => f.id === id);
+  if (!folder) return ['找不到此資料夾。'];
+  const blockers: string[] = [];
+  if (data.folders.some((f) => f.parentId === id)) blockers.push('仍有子資料夾');
+  if (data.contents.some((c) => c.folderId === id)) blockers.push('仍有展示內容');
+  if (folder.id === 'scenes' && data.scenes.length > 0) blockers.push('仍有場景推介');
+  return blockers;
+}
 export function searchCatalog(
   data: Catalog,
   folderId: string | null,
@@ -53,11 +64,19 @@ export function searchCatalog(
       const attributes = data.products
         .filter((p) => c.productIds.includes(p.id))
         .flatMap((p) => [p.name, p.code, p.brand, p.colour, p.style, p.keywords]);
+      const eshopAttributes = (c.eshopProducts ?? []).flatMap((p) => [
+        p.title,
+        p.brand,
+        p.sku,
+        p.description,
+      ]);
       // Only this content's folder path and linked products contribute to a match.
       return match([
         c.name,
         c.fileName,
         c.keywords,
+        ...(c.tags ?? []),
+        ...eshopAttributes,
         ...trail(data.folders, c.folderId).flatMap((f) => [f.name, folderLabel(f)]),
         ...attributes,
       ]);
@@ -112,4 +131,15 @@ export function visiblePages(current: number, total: number, landscape: boolean)
 }
 export function contentAssets(c: Content): string[] {
   return [...c.files, c.cover].filter(Boolean);
+}
+export function cacheableAssetRefs(c: Content): string[] {
+  return [
+    ...new Set(contentAssets(c).filter((ref) => ref && !/^https?:\/\//i.test(ref))),
+  ];
+}
+export function folderPublishedContents(data: Catalog, folderId: string): Content[] {
+  const scope = descendants(data.folders, folderId);
+  return data.contents
+    .filter((content) => content.status === 'published' && scope.has(content.folderId))
+    .sort(byOrder);
 }

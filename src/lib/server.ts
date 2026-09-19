@@ -98,6 +98,26 @@ export async function readCatalog(): Promise<Catalog> {
   }
   return data;
 }
+export async function deleteEntry(entity: Entity, id: string) {
+  if (entity === 'settings') throw new HttpError(400, '不可刪除此設定。');
+  if (demoEnabled()) {
+    const action = localQueue.then(async () => {
+      const data = await readLocal();
+      const key = collection[entity];
+      const list = data[key] as { id: string }[];
+      const index = list.findIndex((row) => row.id === id);
+      if (index < 0) throw new HttpError(404, '找不到項目。');
+      list.splice(index, 1);
+      await writeLocal(data);
+    });
+    localQueue = action.catch(() => undefined);
+    await action;
+    return;
+  }
+  const sb = await supabase();
+  const { error } = await sb.from('catalog_entries').delete().eq('entity', entity).eq('id', id);
+  if (error) throw new HttpError(500, '刪除失敗，請稍後重試。');
+}
 export async function saveEntry(entity: Entity, payload: { id: string }, expectedVersion?: string) {
   if (demoEnabled()) {
     const action = localQueue.then(async () => {
