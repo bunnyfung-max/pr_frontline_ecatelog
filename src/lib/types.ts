@@ -83,6 +83,7 @@ export interface Catalog {
   settings: Settings;
 }
 export type Entity = 'content' | 'product' | 'scene' | 'offer' | 'settings' | 'folder';
+export type ManageKind = 'product' | 'scene' | 'offer';
 export interface Session {
   role: 'admin' | 'frontline';
   email: string;

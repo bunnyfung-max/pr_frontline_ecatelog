@@ -3,6 +3,7 @@ import { useRef, useState } from 'react';
 import { ArrowDown, ArrowUp, FileText, Film, UploadCloud, X } from 'lucide-react';
 import type { Content } from '@/lib/types';
 import { upload } from '@/lib/client';
+import { MAX_UPLOAD_BYTES } from '@/lib/upload-policy';
 import {
   IMAGE_MIMES,
   KIT_MIMES,
@@ -54,13 +55,13 @@ export function SalesKitUpload({
     onError('');
     try {
       const allowed = slot === undefined ? KIT_MIMES : IMAGE_MIMES;
-      if (selected.some((file) => !allowed.includes(file.type)))
+      if (selected.some((file) => !(allowed as readonly string[]).includes(file.type)))
         throw new Error(
           slot === undefined
             ? '只支援 JPG、PNG、WebP、PDF、MP4 或 WebM。'
             : '此位置只接受 JPG、PNG 或 WebP 圖片。',
         );
-      if (selected.some((file) => file.size === 0 || file.size > 50 * 1024 * 1024))
+      if (selected.some((file) => file.size === 0 || file.size > MAX_UPLOAD_BYTES))
         throw new Error('每個檔案須大於 0 bytes，並且不超過 50 MB。');
       if (slot !== undefined && selected.length !== 1)
         throw new Error('每個圖片位置只接受一張圖片。');
@@ -68,7 +69,7 @@ export function SalesKitUpload({
         throw new Error('每份 Sales Kit 最多 5 個圖片位置及 35 份額外檔案。');
       for (const [i, file] of selected.entries()) {
         setProgress(`正在上載 ${i + 1} / ${selected.length}：${file.name}`);
-        const ref = await upload(file, demo);
+        const ref = await upload(file);
         // Retain successful uploads even if a subsequent file fails.
         setValue((old) => ({
           ...old,

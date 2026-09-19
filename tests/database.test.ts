@@ -21,6 +21,7 @@ test('Postgres migration and RLS: anonymous, unapproved, frontline and admin bou
     `);
     await db.exec(await readFile('supabase/migrations/001_catalog.sql', 'utf8'));
     await db.exec(await readFile('supabase/migrations/002_seed.sql', 'utf8'));
+    await db.exec(await readFile('supabase/migrations/003_admin_delete.sql', 'utf8'));
     const admin = '11111111-1111-4111-8111-111111111111';
     const staff = '22222222-2222-4222-8222-222222222222';
     const outsider = '33333333-3333-4333-8333-333333333333';
@@ -167,6 +168,23 @@ test('Postgres migration and RLS: anonymous, unapproved, frontline and admin bou
     assert.equal(
       (await db.query('select name from storage.objects where name=any($1::text[])', [extraNames]))
         .rows.length,
+      0,
+    );
+    const blockedDelete = await db.query(
+      "delete from public.catalog_entries where entity='content' and id='published' returning id",
+    );
+    assert.equal(blockedDelete.rows.length, 0);
+    assert.equal(
+      (await db.query("select id from public.catalog_entries where id='published'")).rows.length,
+      1,
+    );
+    await db.query("select set_config('request.jwt.claim.sub',$1,false)", [admin]);
+    const adminDelete = await db.query(
+      "delete from public.catalog_entries where entity='content' and id='archived' returning id",
+    );
+    assert.equal(adminDelete.rows.length, 1);
+    assert.equal(
+      (await db.query("select id from public.catalog_entries where id='archived'")).rows.length,
       0,
     );
   } finally {

@@ -9,8 +9,12 @@ import {
   failure,
   HttpError,
 } from '@/lib/server';
-import { publicCatalog } from '@/lib/catalog';
+import { allowedAssetRefs, catalogAssetRefs } from '@/lib/catalog';
+import { isCmsUnlocked } from '@/lib/cms-access';
 import { assetRef } from '@/lib/validation';
+import { validateUploadBytes } from '@/lib/upload-validation';
+import { mimeFromExtension } from '@/lib/upload-policy';
+
 export async function GET(request: Request) {
   try {
     const session = await requireSession();
@@ -18,18 +22,13 @@ export async function GET(request: Request) {
     if (!assetRef.safeParse(ref).success || !ref.startsWith('asset:'))
       throw new HttpError(400, '檔案位置無效。');
     const raw = await readCatalog();
-    const data = session.role === 'admin' ? raw : publicCatalog(raw);
-    const refs = [
-      ...data.contents.flatMap((c) => [...c.files, c.cover]),
-      ...data.products.map((p) => p.image),
-      ...data.scenes.map((s) => s.image),
-      ...data.offers.map((o) => o.image),
-    ];
-    if (session.role !== 'admin' && !refs.includes(ref))
-      throw new HttpError(404, '檔案不存在或尚未發布。');
+    const cmsUnlocked = session.role === 'admin' && (await isCmsUnlocked(session));
+    const allowed = allowedAssetRefs(raw, cmsUnlocked);
+    if (!allowed.includes(ref)) throw new HttpError(404, '檔案不存在或尚未發布。');
+    if (!catalogAssetRefs(raw).includes(ref)) throw new HttpError(404, '檔案不存在或尚未發布。');
     const file = ref.slice(6);
     if (demoEnabled()) {
-      if (!/^[\w-]+\.(jpg|jpeg|png|webp|pdf|mp4|webm)$/.test(file))
+      if (!/^[\w-]+\.(jpg|jpeg|png|webp|pdf|mp4|webm)$/.test(file) && !/^[\w-]+\/[\w-]+\.(jpg|jpeg|png|webp|pdf|mp4|webm)$/.test(file))
         throw new HttpError(404, '找不到檔案。');
       let bytes: Buffer;
       try {
@@ -37,18 +36,12 @@ export async function GET(request: Request) {
       } catch {
         throw new HttpError(404, '找不到檔案。');
       }
-      const mime: Record<string, string> = {
-        jpg: 'image/jpeg',
-        jpeg: 'image/jpeg',
-        png: 'image/png',
-        webp: 'image/webp',
-        pdf: 'application/pdf',
-        mp4: 'video/mp4',
-        webm: 'video/webm',
-      };
+      const mime = mimeFromExtension(file.split('.').pop()!);
+      if (!mime || !validateUploadBytes(bytes, mime))
+        throw new HttpError(404, '找不到檔案。');
       return new Response(new Uint8Array(bytes), {
         headers: {
-          'Content-Type': mime[file.split('.').pop()!],
+          'Content-Type': mime,
           'Cache-Control': 'private, no-store',
         },
       });

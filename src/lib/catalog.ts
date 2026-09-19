@@ -132,6 +132,22 @@ export function visiblePages(current: number, total: number, landscape: boolean)
 export function contentAssets(c: Content): string[] {
   return [...c.files, c.cover].filter(Boolean);
 }
+export function catalogAssetRefs(data: Catalog): string[] {
+  return [
+    ...new Set(
+      [
+        ...data.contents.flatMap((content) => contentAssets(content)),
+        ...data.products.map((product) => product.image),
+        ...data.scenes.map((scene) => scene.image),
+        ...data.offers.map((offer) => offer.image),
+      ].filter((ref) => ref && ref.startsWith('asset:')),
+    ),
+  ];
+}
+export function allowedAssetRefs(data: Catalog, cmsUnlocked: boolean): string[] {
+  const source = cmsUnlocked ? data : publicCatalog(data);
+  return catalogAssetRefs(source);
+}
 export function cacheableAssetRefs(c: Content): string[] {
   return [
     ...new Set(contentAssets(c).filter((ref) => ref && !/^https?:\/\//i.test(ref))),

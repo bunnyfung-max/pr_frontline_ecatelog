@@ -1,6 +1,9 @@
 import { z } from 'zod';
 import { isPriceriteProductUrl } from './pricerite-eshop-url';
 import { KIT_RESERVED, KIT_REQUIRED } from './sales-kit';
+import { MAX_UPLOAD_BYTES, mimeExtension, UPLOAD_MIMES } from './upload-policy';
+
+export { mimeExtension };
 export const idSchema = z.string().regex(/^[a-zA-Z0-9_-]{1,100}$/);
 export const httpsUrl = z
   .string()
@@ -153,21 +156,6 @@ export const uploadSchema = z.object({
     .number()
     .int()
     .positive()
-    .max(50 * 1024 * 1024),
-  mime: z.enum([
-    'image/jpeg',
-    'image/png',
-    'image/webp',
-    'application/pdf',
-    'video/mp4',
-    'video/webm',
-  ]),
+    .max(MAX_UPLOAD_BYTES),
+  mime: z.enum(UPLOAD_MIMES),
 });
-export const mimeExtension: Record<string, string> = {
-  'image/jpeg': 'jpg',
-  'image/png': 'png',
-  'image/webp': 'webp',
-  'application/pdf': 'pdf',
-  'video/mp4': 'mp4',
-  'video/webm': 'webm',
-};

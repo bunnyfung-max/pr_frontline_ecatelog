@@ -1,0 +1,37 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# next.js
+.next/
+out/
+
+# build / tooling
+tsconfig.tsbuildinfo
+*.tsbuildinfo
+
+# env & local data
+.env
+.env.local
+.env.*.local
+.data/
+
+# testing / qa artifacts
+qa/
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+
+# os / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# logs
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*

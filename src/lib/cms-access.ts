@@ -4,21 +4,41 @@ import { HttpError } from './server';
 import type { Session } from './types';
 import { demoEnabled, requireSession } from './server';
 import { DEMO_CMS_PASSWORD_DEFAULT } from './cms-password';
+import {
+  cmsCookieSecret,
+  createCmsUnlockToken,
+  verifyCmsUnlockToken,
+} from './cms-cookie-token';
 
 const CMS_UNLOCK_COOKIE = 'cms_unlock';
 
 export const demoCmsPassword = () => process.env.DEMO_CMS_PASSWORD || DEMO_CMS_PASSWORD_DEFAULT;
 
-export async function isCmsUnlocked() {
+export async function isCmsUnlocked(expected?: Session) {
   const jar = await cookies();
-  return jar.get(CMS_UNLOCK_COOKIE)?.value === '1';
+  const token = jar.get(CMS_UNLOCK_COOKIE)?.value;
+  if (!token) return false;
+  try {
+    const verified = verifyCmsUnlockToken(token, cmsCookieSecret());
+    if (!verified) {
+      await clearCmsUnlock();
+      return false;
+    }
+    if (expected && (expected.email !== verified.email || expected.role !== verified.role)) {
+      return false;
+    }
+    return true;
+  } catch {
+    await clearCmsUnlock();
+    return false;
+  }
 }
 
-export async function setCmsUnlocked() {
+export async function setCmsUnlocked(session: Session) {
   const jar = await cookies();
-  jar.set(CMS_UNLOCK_COOKIE, '1', {
+  jar.set(CMS_UNLOCK_COOKIE, createCmsUnlockToken(session.email, session.role, cmsCookieSecret()), {
     httpOnly: true,
-    sameSite: 'lax',
+    sameSite: 'strict',
     secure: process.env.NODE_ENV === 'production',
     path: '/',
   });
@@ -31,7 +51,7 @@ export async function clearCmsUnlock() {
 
 export async function requireCmsAccess(): Promise<Session> {
   const session = await requireSession(true);
-  if (!(await isCmsUnlocked())) {
+  if (!(await isCmsUnlocked(session))) {
     throw new HttpError(403, '請先驗證內容管理密碼。');
   }
   return session;

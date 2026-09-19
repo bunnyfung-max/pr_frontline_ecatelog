@@ -17,8 +17,7 @@ export const KIT_PREVIEW_LABELS = [
 export const KIT_RESERVED = KIT_SLOTS.length;
 export const KIT_REQUIRED = 1;
 export const MAX_KIT_FILES = 40;
-export const IMAGE_MIMES = ['image/jpeg', 'image/png', 'image/webp'];
-export const KIT_MIMES = [...IMAGE_MIMES, 'application/pdf', 'video/mp4', 'video/webm'];
+export { IMAGE_MIMES, KIT_MIMES } from './upload-policy';
 
 // Empty reserved positions are intentional. Never compact before storing a kit.
 export function kitFiles(files: string[]): string[] {

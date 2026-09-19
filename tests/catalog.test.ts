@@ -9,6 +9,8 @@ import {
   activeOffer,
   cacheableAssetRefs,
   folderPublishedContents,
+  allowedAssetRefs,
+  catalogAssetRefs,
 } from '../src/lib/catalog';
 import { schemas, assetRef, httpsUrl } from '../src/lib/validation';
 test('home has exactly five roots; weekly summary never seeded', () => {
@@ -88,6 +90,26 @@ test('folder published contents include descendants but exclude drafts', () => {
   assert.ok(scoped.length > 1);
   assert.ok(scoped.every((content) => content.status === 'published'));
   assert.equal(scoped.some((content) => content.id === 'draft-demo'), false);
+});
+test('draft asset refs require CMS unlock; published refs stay visible', () => {
+  const d = initialCatalog(true);
+  d.contents.push({
+    ...d.contents[0],
+    id: 'draft-asset',
+    name: '草稿素材',
+    status: 'draft',
+    files: ['asset:draft-only.jpg'],
+    cover: 'asset:draft-cover.png',
+  });
+  const all = catalogAssetRefs(d);
+  assert.ok(all.includes('asset:draft-only.jpg'));
+  assert.ok(all.includes('asset:draft-cover.png'));
+  const locked = allowedAssetRefs(d, false);
+  assert.equal(locked.includes('asset:draft-only.jpg'), false);
+  assert.equal(locked.includes('asset:draft-cover.png'), false);
+  const unlocked = allowedAssetRefs(d, true);
+  assert.ok(unlocked.includes('asset:draft-only.jpg'));
+  assert.ok(unlocked.includes('asset:draft-cover.png'));
 });
 test('cacheable assets include local files but skip external links', () => {
   const d = initialCatalog(true);
