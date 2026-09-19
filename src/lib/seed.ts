@@ -1,0 +1,151 @@
+import type { Catalog, Folder } from './types';
+const folder = (
+  id: string,
+  parentId: string | null,
+  name: string,
+  order = 0,
+  subtitle = '',
+): Folder => ({ id, parentId, name, order, subtitle });
+export function initialCatalog(demo = false): Catalog {
+  const folders = [
+    folder('housing', null, 'New Housing', 0, '由一張平面圖，開始理想的家'),
+    folder('pop', null, 'POP 展示', 1, '門市推廣與最新 E-poster'),
+    folder('tmf', null, 'TMF', 2, '組合傢俬及專屬推廣'),
+    folder('creator', null, '創造家', 3, '空間設計與家居靈感'),
+    folder('scenes', null, '場景推介', 4, '配合不同生活需要的選擇'),
+    folder('private', 'housing', '私樓', 0),
+    folder('public', 'housing', '公居屋', 1),
+    folder('simple', 'housing', '簡易房', 2),
+    ...['private', 'public', 'simple'].flatMap((id) =>
+      ['港島', '九龍', '新界'].map((name, i) => folder(`${id}-${i}`, id, name, i)),
+    ),
+    ...['TMF Offer', 'Video', 'Weekly Eposter', 'Weekly Eposter_ST153'].map((name, i) =>
+      folder(`pop-${i}`, 'pop', name, i),
+    ),
+    folder('tmf-centre', 'tmf', 'POP Centre'),
+    ...[2024, 2025, 2026].map((year) => folder(`tmf-${year}`, 'tmf-centre', `${year}`, -year)),
+    folder('creator-video', 'creator', '門市影片', 0),
+    folder('creator-centre', 'creator', 'POP Center', 1),
+    folder('creator-floorplan', 'creator-centre', 'Floorplan', 0),
+    folder('creator-promotion', 'creator-centre', 'Promotion', 1),
+    folder('creator-2026', 'creator-promotion', '2026'),
+  ];
+  const data: Catalog = {
+    folders,
+    contents: [],
+    products: [],
+    offers: [],
+    settings: { id: 'store', label: '前往自在購', url: '' },
+    scenes: [
+      '公居屋專家推介',
+      '私樓傢俬套裝',
+      '租客1天入伙套餐',
+      '入伙必備家品',
+      '銀優生活',
+      '返學必備推介',
+    ].map((name, i) => ({ id: `scene-${i}`, name, order: i, image: '', url: '', active: true })),
+  };
+  if (!demo) return data;
+  data.folders.push(
+    folder('estate-a', 'private-1', '示例屋苑 A', 0, '示例資料 · 非真實屋苑'),
+    folder('unit-a', 'estate-a', '450–550 呎 / 2–3 人'),
+    folder('estate-b', 'private-1', '示例屋苑 B', 1),
+    folder('unit-b', 'estate-b', '650 呎 / 4 人'),
+  );
+  data.products = [
+    {
+      id: 'sofa',
+      name: '示例雙人梳化',
+      code: 'DEMO-001',
+      brand: '示例品牌',
+      colour: '米白色',
+      style: '北歐簡約',
+      keywords: '梳化 客廳 sofa',
+      image: '/demo/living.svg',
+      url: '',
+    },
+    {
+      id: 'desk',
+      name: '示例橡木書枱',
+      code: 'DEMO-002',
+      brand: '示例品牌',
+      colour: '原木色',
+      style: '日式',
+      keywords: '書房 desk',
+      image: '/demo/plan.svg',
+      url: '',
+    },
+  ];
+  data.contents = [
+    {
+      id: 'kit-a',
+      folderId: 'unit-a',
+      name: '小空間，大可能',
+      type: 'image',
+      files: ['/demo/plan.svg', '/demo/living.svg', '/demo/details.svg'],
+      fileName: 'sample-sale-kit',
+      cover: '/demo/living.svg',
+      keywords: '平面圖 家居配置 套裝',
+      productIds: ['sofa'],
+      status: 'published',
+      order: 0,
+      updatedAt: '2026-09-18T00:00:00Z',
+    },
+    {
+      id: 'kit-b',
+      folderId: 'unit-b',
+      name: '靈活工作角落',
+      type: 'image',
+      files: ['/demo/details.svg'],
+      fileName: 'sample-desk',
+      cover: '/demo/details.svg',
+      keywords: '書房',
+      productIds: ['desk'],
+      status: 'published',
+      order: 0,
+      updatedAt: '2026-09-18T00:00:00Z',
+    },
+    {
+      id: 'poster-demo',
+      folderId: 'pop-2',
+      name: '讓日常，多一點舒適',
+      type: 'image',
+      files: ['/demo/living.svg'],
+      fileName: 'weekly-eposter-demo',
+      cover: '/demo/living.svg',
+      keywords: '梳化 推廣',
+      productIds: ['sofa'],
+      status: 'published',
+      order: 0,
+      updatedAt: '2026-09-18T00:00:00Z',
+    },
+    {
+      id: 'draft-demo',
+      folderId: 'unit-a',
+      name: '未發布示例草稿',
+      type: 'image',
+      files: ['/demo/plan.svg'],
+      fileName: 'draft',
+      cover: '',
+      keywords: '草稿',
+      productIds: [],
+      status: 'draft',
+      order: 1,
+      updatedAt: '2026-09-18T00:00:00Z',
+    },
+  ];
+  data.offers = [
+    {
+      id: 'bundle-demo',
+      name: '客廳舒適組合（示例）',
+      summary: '梳化與茶几的配搭靈感。正式優惠及連結待提供。',
+      image: '/demo/living.svg',
+      url: '',
+      order: 0,
+      active: true,
+      startDate: '',
+      endDate: '',
+    },
+  ];
+  return data;
+}

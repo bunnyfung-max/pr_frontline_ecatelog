@@ -1,0 +1,120 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { PurchaseLinks, ContentShoppingLinks } from '../src/components/shopping-links';
+import { initialCatalog } from '../src/lib/seed';
+import { schemas } from '../src/lib/validation';
+
+test('product saves distinct links and preserves legacy eShop URL', () => {
+  const product = initialCatalog(true).products[0];
+  const legacy = schemas.product.parse({ ...product, url: 'https://example.com/sofa' });
+  assert.equal(legacy.url, 'https://example.com/sofa');
+  assert.equal(legacy.storeUrl, '');
+  const saved = schemas.product.parse({ ...legacy, storeUrl: 'https://example.com/store/sofa' });
+  assert.equal(saved.storeUrl, 'https://example.com/store/sofa');
+  assert.equal(saved.url, legacy.url);
+});
+
+test('content accepts independent kit links, old records and clearing links', () => {
+  const content = initialCatalog(true).contents[0];
+  const legacy = schemas.content.parse(content);
+  assert.equal(legacy.storeUrl, '');
+  assert.equal(legacy.eshopUrl, '');
+  const saved = schemas.content.parse({
+    ...content,
+    storeUrl: 'https://example.com/store/kit',
+    eshopUrl: 'https://example.com/kit',
+  });
+  assert.equal(saved.storeUrl, 'https://example.com/store/kit');
+  assert.equal(saved.eshopUrl, 'https://example.com/kit');
+  const cleared = schemas.content.parse({ ...saved, storeUrl: '', eshopUrl: '' });
+  assert.equal(cleared.storeUrl, '');
+  assert.equal(cleared.eshopUrl, '');
+});
+
+test('API schemas reject unsafe links in each product and kit field', () => {
+  const data = initialCatalog(true);
+  for (const invalid of [
+    'javascript:alert(1)',
+    'data:text/html,bad',
+    'http://example.com',
+    '//example.com',
+    'not a URL',
+  ]) {
+    for (const field of ['storeUrl', 'url'])
+      assert.equal(
+        schemas.product.safeParse({ ...data.products[0], [field]: invalid }).success,
+        false,
+      );
+    for (const field of ['storeUrl', 'eshopUrl'])
+      assert.equal(
+        schemas.content.safeParse({ ...data.contents[0], [field]: invalid }).success,
+        false,
+      );
+  }
+});
+
+test('viewer keeps kit/product destinations separate and excludes unrelated products', () => {
+  const data = initialCatalog(true);
+  const content = {
+    ...data.contents[0],
+    storeUrl: 'https://example.com/store/kit',
+    eshopUrl: 'https://example.com/eshop/kit',
+  };
+  data.products[0] = {
+    ...data.products[0],
+    storeUrl: 'https://example.com/store/sofa',
+    url: 'https://example.com/eshop/sofa',
+  };
+  data.products[1] = {
+    ...data.products[1],
+    storeUrl: 'https://example.com/store/desk',
+    url: 'https://example.com/eshop/desk',
+  };
+  const html = renderToStaticMarkup(
+    createElement(ContentShoppingLinks, { content, products: data.products }),
+  );
+  for (const url of [
+    content.storeUrl,
+    content.eshopUrl,
+    data.products[0].storeUrl,
+    data.products[0].url,
+  ])
+    assert.ok(html.includes(`href="${url}"`));
+  assert.equal((html.match(/<a /g) || []).length, 4);
+  assert.equal(html.includes('https://example.com/store/desk'), false);
+  assert.equal(html.includes('https://example.com/eshop/desk'), false);
+  assert.equal((html.match(/rel="noopener noreferrer"/g) || []).length, 4);
+});
+
+test('missing kit links do not borrow product links or legacy shared settings', () => {
+  const data = initialCatalog(true);
+  data.settings.url = 'https://example.com/obsolete-global';
+  data.products[0].url = 'https://example.com/sofa';
+  const html = renderToStaticMarkup(
+    createElement(ContentShoppingLinks, { content: data.contents[0], products: data.products }),
+  );
+  const kitSection = html.split('</section>')[0];
+  assert.ok(kitSection.includes('購物連結待設定'));
+  assert.equal(kitSection.includes('href='), false);
+  assert.ok(html.includes('href="https://example.com/sofa"'));
+  assert.equal(html.includes('obsolete-global'), false);
+});
+
+test('renderer hides unsafe legacy destinations and only shows configured buttons', () => {
+  const unsafe = renderToStaticMarkup(
+    createElement(PurchaseLinks, {
+      storeUrl: 'javascript:alert(1)',
+      eshopUrl: 'http://example.com',
+    }),
+  );
+  assert.equal(unsafe.includes('href='), false);
+  assert.ok(unsafe.includes('購物連結待設定'));
+  const one = renderToStaticMarkup(
+    createElement(PurchaseLinks, { storeUrl: 'https://example.com/sofa' }),
+  );
+  assert.equal((one.match(/<a /g) || []).length, 1);
+  assert.ok(one.includes('前往自在購'));
+  assert.equal(one.includes('前往 eShop'), false);
+});

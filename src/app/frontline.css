@@ -1,0 +1,273 @@
+/* Frontline browsing is deliberately plain; CMS retains its existing workspace. */
+.frontline {
+  --bg: #fff;
+  --paper: #fff;
+  --ink: #222;
+  --muted: #777;
+  --line: #e8e8e8;
+  background: #fff;
+  min-height: 100dvh;
+}
+
+.frontline .topbar {
+  height: 76px;
+  padding: 0 max(28px, calc((100vw - 1100px) / 2));
+  border-bottom: 1px solid #f0f0f0;
+}
+.frontline .brand {
+  font-size: 26px;
+}
+.frontline .brand > span {
+  font-size: 15px;
+  font-weight: 500;
+}
+.frontline .top-actions {
+  gap: 16px;
+}
+.frontline .top-actions .subtle {
+  font-size: 12px;
+  font-weight: 400;
+  color: #777;
+}
+.frontline .demo-label {
+  font-size: 11px;
+  color: #888;
+}
+.frontline .workspace {
+  display: block;
+  min-height: calc(100dvh - 76px);
+}
+.frontline .main {
+  width: 100%;
+  max-width: 1164px;
+  padding: 52px 32px 64px;
+  margin: 0 auto;
+}
+.simple-directory h1 {
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: 0;
+  margin: 0 0 26px;
+}
+.directory-search {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  height: 62px;
+  padding: 0 19px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  color: #777;
+  background: #fff;
+}
+.directory-search:focus-within {
+  border-color: #888;
+}
+.directory-search input:not([type='checkbox']):not([type='file']) {
+  width: 100%;
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  border-radius: 0;
+  padding: 12px 0;
+  font-size: 16px;
+  background: transparent;
+}
+.directory-search input:focus-visible {
+  outline: none;
+}
+.directory-scope {
+  font-size: 12px;
+  color: #888;
+  margin: 10px 0 30px;
+}
+.directory-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+.directory-entry {
+  min-width: 0;
+  min-height: 98px;
+  padding: 23px 24px;
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  background: #fff;
+  text-align: left;
+  color: #555;
+}
+.directory-entry > span {
+  font-size: 16px;
+  font-weight: 500;
+  color: #222;
+  flex: 1;
+}
+.directory-entry > svg:last-of-type {
+  color: #999;
+  width: 16px;
+}
+button.directory-entry:hover,
+a.directory-entry:hover {
+  border-color: #aaa;
+  background: #fcfcfc;
+}
+.directory-entry.unconfigured {
+  flex-wrap: wrap;
+}
+.directory-entry.unconfigured > small {
+  margin-left: 40px;
+  flex-basis: 100%;
+  color: #888;
+  font-size: 11px;
+}
+
+.frontline .breadcrumb {
+  margin: -13px 0 24px;
+  font-size: 12px;
+  color: #777;
+}
+.frontline .breadcrumb button[aria-current='page'] {
+  color: #333;
+}
+.frontline .page-heading {
+  margin: 0 0 25px;
+}
+.frontline .page-heading h1 {
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: 0;
+  margin: 0;
+}
+.frontline .search-bar {
+  min-height: 62px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  color: #777;
+  padding-left: 19px;
+}
+.frontline .search-bar input:not([type='checkbox']):not([type='file']) {
+  font-size: 16px;
+}
+.frontline .scope-tag {
+  background: #fff;
+  color: #888;
+  font-size: 11px;
+}
+.frontline .scope-note {
+  color: #888;
+  margin: 10px 0 28px;
+  font-size: 12px;
+}
+.frontline .scope-note > span {
+  display: none;
+}
+.frontline .folder-grid {
+  gap: 18px;
+}
+.frontline .folder-card {
+  padding: 20px;
+  min-height: 94px;
+  border-radius: 8px;
+  border-color: #e5e5e5;
+}
+.frontline .folder-card strong {
+  font-size: 16px;
+  font-weight: 500;
+}
+.frontline .folder-icon {
+  background: #fff;
+  color: #777;
+}
+.frontline .folder-card small {
+  color: #888;
+}
+.frontline .folder-card:hover,
+.frontline .content-card:hover {
+  border-color: #aaa;
+  box-shadow: none;
+}
+.frontline .list-title h2 {
+  font-size: 16px;
+  font-weight: 500;
+}
+.frontline .content-info > span {
+  color: #555;
+}
+.frontline .viewer,
+.frontline .reader-toolbar {
+  background: #fff;
+}
+
+@media (max-width: 900px) {
+  .directory-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .frontline .main {
+    padding-top: 40px;
+  }
+}
+@media (max-width: 600px) {
+  .frontline .topbar {
+    height: 66px;
+    padding: 0 20px;
+  }
+  .frontline .top-actions {
+    gap: 4px;
+  }
+  .frontline .demo-label {
+    font-size: 10px;
+  }
+  .frontline .brand {
+    font-size: 23px;
+    gap: 9px;
+  }
+  .frontline .brand > span {
+    font-size: 13px;
+    padding-left: 9px;
+  }
+  .frontline .top-actions .subtle {
+    gap: 6px;
+    padding: 8px;
+    font-size: 11px;
+  }
+  .frontline .top-actions .subtle svg {
+    width: 15px;
+  }
+  .frontline .main {
+    padding: 32px 20px 48px;
+  }
+  .simple-directory h1,
+  .frontline .page-heading h1 {
+    font-size: 23px;
+  }
+  .directory-search {
+    height: 58px;
+    padding: 0 16px;
+  }
+  .directory-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .directory-entry {
+    min-height: 80px;
+    padding: 20px;
+  }
+  .directory-scope {
+    margin-bottom: 24px;
+  }
+  .frontline .search-bar {
+    gap: 10px;
+  }
+  .frontline .search-bar .scope-tag {
+    display: none;
+  }
+  .frontline .search-bar input:not([type='checkbox']):not([type='file']) {
+    font-size: 14px;
+  }
+  .frontline .folder-grid {
+    gap: 12px;
+  }
+}

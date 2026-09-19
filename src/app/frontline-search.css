@@ -1,0 +1,560 @@
+/* Search-first frontline surface, sized for a 1280 × 720 landscape viewport.
+   Use natural scrolling on smaller screens; never crop or force orientation.
+   CMS styles remain in globals.css. */
+.frontline {
+  --bg: #fff;
+  --paper: #fff;
+  --ink: #151b20;
+  --muted: #535b65;
+  --line: #d9dce1;
+  --orange: #c94706;
+  --orange-dark: #aa3800;
+  background: #fff;
+  color: var(--ink);
+  min-height: 100dvh;
+  font-family: 'Noto Sans TC', 'Microsoft JhengHei', Arial, sans-serif;
+  font-size: 18px;
+  line-height: 1.6;
+}
+.frontline .topbar {
+  height: 64px;
+  padding: 0 max(36px, calc((100vw - 1048px) / 2));
+  border: 0;
+}
+.frontline .brand {
+  font-size: 28px;
+  min-height: 48px;
+  gap: 16px;
+}
+.frontline .brand > span {
+  font-size: 18px;
+  padding-left: 16px;
+  color: var(--ink);
+}
+.frontline-logo {
+  width: 58px;
+  height: 28px;
+  object-fit: cover;
+  object-position: right;
+  flex-shrink: 0;
+}
+.frontline .top-actions {
+  gap: 18px;
+}
+.frontline .top-actions .subtle {
+  font-size: 18px;
+  min-height: 48px;
+  padding: 8px 0;
+}
+.frontline .demo-label {
+  font-size: 14px;
+  color: var(--muted);
+}
+.frontline .workspace {
+  display: block;
+  min-height: calc(100dvh - 64px);
+}
+.frontline .main {
+  width: 100%;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 24px 36px;
+}
+.search-intro h1 {
+  font-size: 36px;
+  line-height: 1.2;
+  letter-spacing: 0;
+  font-weight: 800;
+}
+.search-intro p {
+  font-size: 18px;
+  line-height: 1.5;
+  margin-top: 6px;
+}
+.frontline-search {
+  margin-top: 20px;
+}
+.directory-search {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 64px;
+  padding: 8px 18px;
+  border: 2px solid #8c949e;
+  border-radius: 10px;
+  background: #fff;
+  color: #454e58;
+}
+.directory-search {
+  flex-direction: row;
+}
+.directory-search > svg {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+}
+.directory-search:focus-within {
+  outline: 3px solid #a93800;
+  outline-offset: 4px;
+}
+.directory-search input:not([type='checkbox']):not([type='file']) {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  border: 0;
+  border-radius: 0;
+  font-size: 20px;
+  font-weight: 500;
+  padding: 8px 0;
+  background: transparent;
+  color: var(--ink);
+}
+.directory-search input::placeholder {
+  color: #616975;
+  opacity: 1;
+}
+.directory-search input:focus-visible {
+  outline: none;
+}
+.directory-search input::-webkit-search-cancel-button {
+  display: none;
+}
+.search-clear {
+  min-height: 44px;
+  padding: 8px 12px;
+  color: #9e3400;
+  font-size: 18px;
+  font-weight: 600;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+.search-clear:hover {
+  background: #fff3eb;
+}
+.search-hint {
+  margin: 8px 0 0;
+  font-size: 16px;
+  color: #454e58;
+  line-height: 1.55;
+}
+.search-submit {
+  display: block;
+  width: 100%;
+  min-height: 56px;
+  margin-top: 12px;
+  padding: 12px 24px;
+  border-radius: 10px;
+  background: var(--orange);
+  color: white;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+.search-submit:hover {
+  background: var(--orange-dark);
+}
+.frontline button:focus-visible,
+.frontline a:focus-visible {
+  outline: 3px solid #913300;
+  outline-offset: 4px;
+}
+.browse-directories,
+.search-results {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+.browse-directories h2,
+.search-results h2 {
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.4;
+  margin: 0 0 8px;
+}
+.directory-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.directory-entry {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  min-height: 64px;
+  padding: 8px 24px 8px 2px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  text-align: left;
+  background: #fff;
+  color: var(--ink);
+}
+.directory-entry:nth-child(even) {
+  border-left: 1px solid var(--line);
+  padding-left: 24px;
+  padding-right: 8px;
+}
+.directory-entry > span {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.directory-entry strong {
+  display: block;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+.directory-entry small {
+  display: block;
+  font-size: 16px;
+  line-height: 1.4;
+  font-weight: 400;
+  color: var(--muted);
+}
+.directory-entry > svg {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  color: #454e58;
+}
+button.directory-entry:hover,
+a.directory-entry:hover {
+  background: #faf6f2;
+}
+.directory-entry.unconfigured {
+  color: #535b65;
+}
+/* All browsing levels share the supplied cards; search results stay as lists. */
+.frontline-browser .folder-card-grid {
+  gap: 14px;
+  margin-top: 14px;
+}
+.frontline-browser .directory-entry.folder-tile {
+  min-height: 96px;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid #e2e3dc;
+  border-radius: 12px;
+  background: #fff;
+}
+.frontline-browser .folder-tile:hover {
+  border-color: #a6b09b;
+  background: #fafbf8;
+}
+.frontline-browser .folder-tile > .folder-tile-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 50px;
+  height: 50px;
+  border-radius: 9px;
+  background: #f3eedf;
+  color: #b19c64;
+}
+.frontline-browser .folder-tile strong {
+  font-size: 18px;
+  line-height: 1.4;
+}
+.frontline-browser .folder-tile small {
+  margin-top: 6px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #70776b;
+}
+.frontline-browser .folder-tile > svg {
+  width: 20px;
+  height: 20px;
+  color: #a6ac9c;
+}
+.folder-tile-alias {
+  display: inline-block;
+  margin-left: 8px;
+  font-size: 14px;
+  font-weight: 400;
+  color: #70776b;
+}
+.frontline .breadcrumb {
+  margin: -8px 0 12px;
+  font-size: 16px;
+  color: #535b65;
+  gap: 4px;
+}
+.frontline .breadcrumb button {
+  min-height: 44px;
+  padding: 8px 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.frontline .breadcrumb button[aria-current='page'] {
+  color: var(--ink);
+}
+.cms-shell .breadcrumb-home-label {
+  display: none;
+}
+.frontline-folder-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.frontline-folder-heading h1 {
+  font-size: 28px;
+  letter-spacing: 0;
+}
+.frontline-folder-heading .subtle {
+  min-height: 44px;
+  font-size: 18px;
+}
+.search-folder .frontline-search {
+  margin-top: 16px;
+}
+.search-folder .search-scope {
+  margin-top: 10px;
+  font-size: 16px;
+  color: var(--muted);
+}
+.search-folder .browse-directories,
+.search-folder .search-results {
+  margin-top: 20px;
+  padding-top: 16px;
+}
+.results-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.results-heading h2 {
+  margin-bottom: 0;
+}
+.result-summary {
+  margin: 8px 0 12px;
+  font-size: 18px;
+  overflow-wrap: anywhere;
+  color: var(--muted);
+}
+.result-group-title {
+  margin: 24px 0 8px;
+  font-size: 20px;
+}
+.search-content-entry {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  width: 100%;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+}
+.search-content-entry:hover {
+  background: #faf6f2;
+}
+.search-thumbnail {
+  width: 80px;
+  height: 90px;
+  flex-shrink: 0;
+  overflow: hidden;
+  background: #f6f6f6;
+  border-radius: 4px;
+}
+.search-thumbnail > img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.search-content-copy {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.search-content-copy small {
+  display: block;
+  font-size: 16px;
+  color: var(--muted);
+}
+.search-content-copy strong,
+.search-content-copy h3 {
+  display: block;
+  font-size: 22px;
+  line-height: 1.5;
+  margin: 4px 0;
+}
+.search-content-copy > span {
+  color: #a03800;
+  font-size: 18px;
+}
+.search-message {
+  padding: 24px 0;
+}
+.search-message h3 {
+  font-size: 22px;
+}
+.search-message p {
+  margin-top: 10px;
+  font-size: 18px;
+}
+.search-message .secondary {
+  font-size: 18px;
+  min-height: 48px;
+  margin-top: 18px;
+}
+.frontline .viewer,
+.frontline .reader-toolbar {
+  background: #fff;
+}
+@media (max-width: 650px) {
+  .frontline .topbar {
+    height: 64px;
+    padding: 0 20px;
+  }
+  .frontline .brand {
+    font-size: 27px;
+    gap: 12px;
+  }
+  .frontline .brand > span {
+    font-size: 18px;
+    padding-left: 12px;
+  }
+  .frontline-logo {
+    width: 54px;
+    height: 26px;
+  }
+  .frontline .top-actions {
+    gap: 8px;
+  }
+  .frontline .top-actions .subtle {
+    font-size: 18px;
+    padding: 8px 0;
+  }
+  .frontline .demo-label {
+    position: absolute;
+    top: 58px;
+    right: 20px;
+    font-size: 12px;
+  }
+  .frontline .main {
+    padding: 28px 20px;
+  }
+  .search-intro h1 {
+    font-size: 28px;
+  }
+  .search-intro p {
+    font-size: 17px;
+    margin-top: 8px;
+  }
+  .frontline-search {
+    margin-top: 20px;
+  }
+  .directory-search {
+    min-height: 64px;
+    gap: 12px;
+    padding: 8px 12px;
+  }
+  .directory-search > svg {
+    width: 24px;
+    height: 24px;
+  }
+  .directory-search input:not([type='checkbox']):not([type='file']) {
+    font-size: 20px;
+  }
+  .search-clear {
+    font-size: 16px;
+    padding: 8px;
+  }
+  .search-hint {
+    font-size: 18px;
+  }
+  .search-submit {
+    min-height: 56px;
+    font-size: 22px;
+    margin-top: 12px;
+  }
+  .browse-directories,
+  .search-results {
+    margin-top: 24px;
+    padding-top: 16px;
+  }
+  .browse-directories h2,
+  .search-results h2 {
+    font-size: 22px;
+    margin-bottom: 8px;
+  }
+  .directory-entry {
+    min-height: 68px;
+    padding: 10px 12px 10px 0;
+    gap: 6px;
+  }
+  .directory-entry:nth-child(even) {
+    padding-left: 16px;
+    padding-right: 0;
+  }
+  .directory-entry strong {
+    font-size: 20px;
+  }
+  .directory-entry small {
+    font-size: 16px;
+  }
+  .directory-entry > svg {
+    width: 22px;
+  }
+  .frontline .breadcrumb {
+    margin-top: 0;
+    font-size: 16px;
+  }
+  .frontline-folder-heading h1 {
+    font-size: 26px;
+  }
+  .search-folder .directory-grid,
+  .search-home .folder-card-grid {
+    grid-template-columns: 1fr;
+  }
+  .search-folder .directory-entry:not(.folder-tile):nth-child(even) {
+    border-left: 0;
+    padding-left: 0;
+  }
+  .search-thumbnail {
+    width: 64px;
+    height: 80px;
+  }
+  .search-content-entry {
+    gap: 12px;
+  }
+  .search-content-copy strong,
+  .search-content-copy h3 {
+    font-size: 20px;
+  }
+  .search-content-copy small {
+    font-size: 16px;
+  }
+  .search-content-entry > svg {
+    width: 20px;
+  }
+}
+@media (max-width: 360px) {
+  .frontline .main,
+  .frontline .topbar {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  .frontline .brand {
+    gap: 8px;
+    font-size: 24px;
+  }
+  .frontline .brand > span {
+    padding-left: 8px;
+    font-size: 16px;
+  }
+  .frontline .top-actions .subtle {
+    font-size: 16px;
+  }
+  .directory-grid {
+    grid-template-columns: 1fr;
+  }
+  .directory-entry:nth-child(even) {
+    border-left: 0;
+    padding-left: 0;
+  }
+}
