@@ -12,6 +12,7 @@ import {
   requireSession,
 } from '@/lib/server';
 import { MAX_FEEDBACK_IMAGE_BYTES } from '@/lib/feedback';
+import { ensurePendingMigrations } from '@/lib/pending-migrations';
 import { mimeExtension } from '@/lib/validation';
 import { validateUploadBytes } from '@/lib/upload-validation';
 import { IMAGE_MIMES } from '@/lib/upload-policy';
@@ -38,6 +39,7 @@ export async function POST(request: Request) {
     const bytes = Buffer.from(await file.arrayBuffer());
     if (!validateUploadBytes(bytes, valid.data.mime))
       throw new HttpError(400, '檔案內容與所選格式不符，請重新選擇。');
+    if (!demoEnabled()) await ensurePendingMigrations();
     if (demoEnabled()) {
       const name = `${randomUUID()}.${mimeExtension[valid.data.mime]}`;
       await mkdir(path.join(dataDirectory(), 'feedback-uploads'), { recursive: true });

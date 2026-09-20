@@ -10,6 +10,7 @@ import {
   HttpError,
 } from '@/lib/server';
 import { feedbackSubmitSchema } from '@/lib/feedback';
+import { ensurePendingMigrations } from '@/lib/pending-migrations';
 import { saveFeedbackSubmission } from '@/lib/feedback-repository';
 import { rateLimit, clientKey } from '@/lib/rate-limit';
 
@@ -30,6 +31,7 @@ export async function POST(request: Request) {
       email: session.email,
       createdAt: new Date().toISOString(),
     };
+    if (!demoEnabled()) await ensurePendingMigrations();
     if (demoEnabled()) {
       await saveFeedbackSubmission(submission);
       return json({ ok: true, id: submission.id });
