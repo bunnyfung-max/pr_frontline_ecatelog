@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { ArrowRight, LockKeyhole } from 'lucide-react';
 import type { Session } from '@/lib/types';
 import { api } from '@/lib/client';
+import { TEST_LOGIN_ACCOUNTS } from '@/lib/test-login-accounts';
 
 export function Login({ onLogin, initialError }: { onLogin: (s: Session) => void; initialError: string }) {
   const [error, setError] = useState(initialError);
@@ -19,7 +20,7 @@ export function Login({ onLogin, initialError }: { onLogin: (s: Session) => void
           <br />
           由一次好對話開始。
         </h1>
-        <img src="/demo/sales-kit-render-1.svg" alt="家居空間插畫" />
+        <img src="/demo/login-hero.jpg" alt="門市銷售工具展示" />
       </div>
       <form
         className="login-card"
@@ -68,7 +69,19 @@ export function Login({ onLogin, initialError }: { onLogin: (s: Session) => void
           {busy ? '登入中…' : '登入'}
           <ArrowRight size={18} />
         </button>
-        <small>內部專用 · 如需帳戶，請聯絡系統管理員。</small>
+        <div className="login-accounts-hint">
+          <p className="login-accounts-title">測試帳戶</p>
+          <ul>
+            {TEST_LOGIN_ACCOUNTS.map((account) => (
+              <li key={account.email}>
+                <strong>{account.label}</strong>
+                <span>{account.email}</span>
+                <span>{account.password}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+        <small>內部專用 · 正式帳戶請聯絡系統管理員。</small>
       </form>
     </main>
   );

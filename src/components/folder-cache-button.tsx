@@ -2,24 +2,40 @@
 
 import { Check, Download, Loader2 } from 'lucide-react';
 import { useFolderAssetCache } from '@/hooks/use-content-cache';
+import type { CacheSyncScope } from '@/lib/cache-sync';
 import type { Content } from '@/lib/types';
 
-export function FolderCacheButton({ contents }: { contents: Content[] }) {
-  const cache = useFolderAssetCache(contents);
+const MEDIA_OFFLINE_NOTE = '文字及產品資料仍需連線；只緩存圖片、PDF 及影片。';
+
+export function FolderCacheButton({
+  contents,
+  syncScope = 'folder',
+  label = '下載多媒體',
+  readyLabel = '多媒體已離線',
+  idleTitle = `下載此目錄及下層的圖片、PDF 及影片到本機。${MEDIA_OFFLINE_NOTE}`,
+  readyTitle = `多媒體已緩存到本機。${MEDIA_OFFLINE_NOTE}`,
+  className = '',
+}: {
+  contents: Content[];
+  syncScope?: CacheSyncScope;
+  label?: string;
+  readyLabel?: string;
+  idleTitle?: string;
+  readyTitle?: string;
+  className?: string;
+}) {
+  const cache = useFolderAssetCache(contents, syncScope);
   if (!cache.hasAssets) return null;
+  const title = cache.status === 'ready' || cache.status === 'partial' ? readyTitle : idleTitle;
   return (
-    <div className="folder-cache-control">
+    <div className={`folder-cache-control ${className}`.trim()}>
       <button
         type="button"
-        className={`cache-toggle ${cache.status === 'ready' ? 'selected' : ''}`}
+        className={`cache-toggle subtle ${cache.status === 'ready' ? 'selected' : ''}`}
         onClick={() => void cache.download()}
         disabled={cache.status === 'downloading' || cache.status === 'checking'}
         aria-busy={cache.status === 'downloading'}
-        title={
-          cache.status === 'ready'
-            ? '此目錄內容已緩存到本機，可離線展示'
-            : '下載此目錄及下層所有圖片、PDF 及影片到本機'
-        }
+        title={title}
       >
         {cache.status === 'downloading' ? (
           <Loader2 size={18} className="spin" aria-hidden="true" />
@@ -30,15 +46,16 @@ export function FolderCacheButton({ contents }: { contents: Content[] }) {
         )}
         <span>
           {cache.status === 'downloading'
-            ? `下載中 ${cache.progress.done}/${cache.progress.total}`
+            ? cache.progress.phase === 'remove'
+              ? `清理中 ${cache.progress.done}/${cache.progress.total}`
+              : `下載中 ${cache.progress.done}/${cache.progress.total}`
             : cache.status === 'ready'
-              ? '已緩存'
+              ? readyLabel
               : cache.status === 'partial'
-                ? `已緩存 ${cache.progress.done}/${cache.progress.total}`
-                : '下載緩存'}
+                ? `${readyLabel} ${cache.progress.done}/${cache.progress.total}`
+                : label}
         </span>
       </button>
-      {cache.error && <p className="folder-cache-error" role="alert">{cache.error}</p>}
     </div>
   );
 }

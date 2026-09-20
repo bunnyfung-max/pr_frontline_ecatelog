@@ -2,9 +2,18 @@ import type { Entity } from './types';
 import { MAX_UPLOAD_BYTES } from './upload-policy';
 export async function api<T>(url: string, options?: RequestInit): Promise<T> {
   const response = await fetch(url, { ...options, cache: 'no-store' });
-  const data = await response.json();
+  const text = await response.text();
+  let data: { error?: string } = {};
+  if (text) {
+    try {
+      data = JSON.parse(text) as { error?: string };
+    } catch {
+      if (!response.ok) throw new Error('操作未完成，請重試。');
+      return {} as T;
+    }
+  }
   if (!response.ok) throw new Error(data.error || '操作未完成，請重試。');
-  return data;
+  return data as T;
 }
 export function save(
   entity: Entity,

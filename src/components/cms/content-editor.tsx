@@ -323,7 +323,8 @@ export function ContentEditor({
             <section>
               <span className="step-label">02 / 搜尋及發布設定</span>
               <div className="notice">
-                房屋類別、地區、屋苑及呎數／人數由所選目錄帶出，毋須重複填寫。
+                房屋類別、地區、屋苑及呎數／人數由所選目錄帶出，毋須重複填寫。搜尋會讀取此處關鍵字、標籤，以及已連結的
+                eShop 產品名稱、品牌與 SKU。
               </div>
               <label>
                 關鍵字
@@ -331,11 +332,17 @@ export function ContentEditor({
                   value={value.keywords}
                   onChange={(e) => update('keywords', e.target.value)}
                   rows={3}
-                  placeholder="例如：兩房、收納、小空間"
+                  placeholder="例如：兩房、收納、小空間、梳化、衣櫃"
                   maxLength={2000}
                 />
+                <small className="muted">
+                  建議加入顧客常用說法（如「梳化」「米白色」），與 eShop 產品資料互相補足。
+                </small>
               </label>
               <TagField tags={value.tags ?? []} onChange={(tags) => update('tags', tags)} />
+              <p className="muted">
+                標籤可用作空間篩選（如「客廳」「書房」）及產品類別；請使用目錄內已有的品牌、顏色與風格用語。
+              </p>
               <EshopProductField
                 products={value.eshopProducts ?? []}
                 onChange={(eshopProducts) => update('eshopProducts', eshopProducts)}

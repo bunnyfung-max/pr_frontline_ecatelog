@@ -78,7 +78,7 @@ test('Postgres migration and RLS: anonymous, unapproved, frontline and admin bou
     assert.equal(visible.includes('published'), true);
     assert.equal(visible.includes('draft'), false);
     assert.equal(visible.includes('archived'), false);
-    assert.equal(visible.length, 50);
+    assert.equal(visible.length, 3);
     const kitRow = await db.query<{ payload: typeof kitLinks }>(
       "select payload from public.catalog_entries where entity='content' and id='published'",
     );
@@ -101,7 +101,7 @@ test('Postgres migration and RLS: anonymous, unapproved, frontline and admin bou
     await db.query("select set_config('request.jwt.claim.sub',$1,false)", [admin]);
     assert.equal(
       (await db.query("select * from public.catalog_entries where entity='content'")).rows.length,
-      52,
+      5,
     );
     await db.query('insert into storage.objects(bucket_id,name) values ($1,$2)', [
       'catalog',

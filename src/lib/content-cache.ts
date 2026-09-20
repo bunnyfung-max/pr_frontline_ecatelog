@@ -1,4 +1,6 @@
 import { cacheableAssetRefs } from './catalog';
+import type { DesiredAsset } from './cache-manifest';
+import type { LocalAsset } from './cache-diff';
 import type { Content } from './types';
 import { assetUrl } from './client';
 
@@ -14,7 +16,20 @@ type CachedRecord = {
   blob: Blob;
   cachedAt: string;
   size: number;
+  contentUpdatedAt?: string;
 };
+
+export type CacheTransferResult = {
+  succeeded: number;
+  failed: number;
+};
+
+function isQuotaError(error: unknown) {
+  return (
+    (error instanceof DOMException && error.name === 'QuotaExceededError') ||
+    (error instanceof Error && error.name === 'QuotaExceededError')
+  );
+}
 
 function openDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -45,6 +60,16 @@ function idb<T>(run: (db: IDBDatabase) => IDBRequest<T>): Promise<T> {
   );
 }
 
+function toLocalAsset(record: CachedRecord): LocalAsset {
+  return {
+    ref: record.ref,
+    contentId: record.contentId,
+    size: record.size,
+    cachedAt: record.cachedAt,
+    contentUpdatedAt: record.contentUpdatedAt,
+  };
+}
+
 export async function getCachedAsset(ref: string): Promise<Blob | null> {
   try {
     const record = await idb<CachedRecord | undefined>((db) =>
@@ -53,6 +78,17 @@ export async function getCachedAsset(ref: string): Promise<Blob | null> {
     return record?.blob ?? null;
   } catch {
     return null;
+  }
+}
+
+export async function listCachedAssets(): Promise<LocalAsset[]> {
+  try {
+    const records = await idb<CachedRecord[]>((db) =>
+      db.transaction(STORE, 'readonly').objectStore(STORE).getAll(),
+    );
+    return records.map(toLocalAsset);
+  } catch {
+    return [];
   }
 }
 
@@ -66,7 +102,12 @@ export async function countCachedAssets(content: Content): Promise<{ cached: num
   return { cached, total: refs.length };
 }
 
-async function putCachedAsset(ref: string, contentId: string, blob: Blob): Promise<void> {
+async function putCachedAsset(
+  ref: string,
+  contentId: string,
+  blob: Blob,
+  contentUpdatedAt?: string,
+): Promise<void> {
   await idb((db) =>
     db.transaction(STORE, 'readwrite').objectStore(STORE).put({
       ref,
@@ -74,18 +115,62 @@ async function putCachedAsset(ref: string, contentId: string, blob: Blob): Promi
       blob,
       cachedAt: new Date().toISOString(),
       size: blob.size,
+      contentUpdatedAt,
     } satisfies CachedRecord),
   );
 }
 
-function catalogAssetRefs(contents: Content[]): { ref: string; contentId: string }[] {
+export async function deleteCachedAssets(refs: string[]): Promise<CacheTransferResult> {
+  if (!refs.length) return { succeeded: 0, failed: 0 };
+  let succeeded = 0;
+  let failed = 0;
+  for (const ref of refs) {
+    try {
+      await idb((db) => db.transaction(STORE, 'readwrite').objectStore(STORE).delete(ref));
+      succeeded += 1;
+    } catch {
+      failed += 1;
+    }
+  }
+  return { succeeded, failed };
+}
+
+export async function downloadDesiredAssets(
+  items: DesiredAsset[],
+  onProgress?: (done: number, total: number) => void,
+): Promise<CacheTransferResult> {
+  if (!items.length) return { succeeded: 0, failed: 0 };
+  let succeeded = 0;
+  let failed = 0;
+  onProgress?.(0, items.length);
+  for (const item of items) {
+    try {
+      const response = await fetch(assetUrl(item.ref), { credentials: 'same-origin', cache: 'no-store' });
+      if (!response.ok) {
+        failed += 1;
+        onProgress?.(succeeded + failed, items.length);
+        continue;
+      }
+      const blob = await response.blob();
+      await putCachedAsset(item.ref, item.contentId, blob, item.contentUpdatedAt);
+      succeeded += 1;
+    } catch (error) {
+      if (isQuotaError(error)) break;
+      failed += 1;
+    }
+    onProgress?.(succeeded + failed, items.length);
+  }
+  return { succeeded, failed };
+}
+
+function catalogAssetRefs(contents: Content[]): DesiredAsset[] {
   const seen = new Set<string>();
-  const items: { ref: string; contentId: string }[] = [];
+  const items: DesiredAsset[] = [];
   for (const content of contents) {
     for (const ref of cacheableAssetRefs(content)) {
       if (seen.has(ref)) continue;
       seen.add(ref);
-      items.push({ ref, contentId: content.id });
+      items.push({ ref, contentId: content.id, contentUpdatedAt: content.updatedAt });
     }
   }
   return items;
@@ -94,31 +179,18 @@ function catalogAssetRefs(contents: Content[]): { ref: string; contentId: string
 export async function downloadCatalogAssets(
   contents: Content[],
   onProgress?: (done: number, total: number) => void,
-): Promise<void> {
+): Promise<CacheTransferResult> {
   const items = catalogAssetRefs(contents);
-  if (!items.length) return;
-  let done = 0;
-  onProgress?.(done, items.length);
-  for (const { ref, contentId } of items) {
-    if (await getCachedAsset(ref)) {
-      done += 1;
-      onProgress?.(done, items.length);
-      continue;
-    }
-    const response = await fetch(assetUrl(ref), { credentials: 'same-origin', cache: 'no-store' });
-    if (!response.ok) throw new Error('部分檔案未能下載，請檢查網絡後重試。');
-    const blob = await response.blob();
-    await putCachedAsset(ref, contentId, blob);
-    done += 1;
-    onProgress?.(done, items.length);
-  }
+  const local = new Set((await listCachedAssets()).map((item) => item.ref));
+  const missing = items.filter((item) => !local.has(item.ref));
+  return downloadDesiredAssets(missing, onProgress);
 }
 
 export async function downloadContentAssets(
   content: Content,
   onProgress?: (done: number, total: number) => void,
-): Promise<void> {
-  await downloadCatalogAssets([content], onProgress);
+): Promise<CacheTransferResult> {
+  return downloadCatalogAssets([content], onProgress);
 }
 
 export async function clearContentCache(contentId: string): Promise<void> {

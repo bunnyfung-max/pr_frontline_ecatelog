@@ -1,4 +1,5 @@
 import 'server-only';
+import { HttpError } from './http-error';
 import { normalizePriceriteProductUrl } from './pricerite-eshop-url';
 import {
   parsePriceriteProductHtml,
@@ -36,7 +37,7 @@ export async function fetchPriceriteProduct(url: string): Promise<EshopProductSn
       specialPrice: null,
       available: false,
     };
-  if (!response.ok) throw new Error('無法讀取 eShop 產品資料，請稍後再試。');
+  if (!response.ok) throw new HttpError(503, '無法讀取 eShop 產品資料，請稍後再試。');
   const html = await response.text();
   const snapshot = parsePriceriteProductHtml(html, normalized);
   if (!snapshot.title && !snapshot.available)

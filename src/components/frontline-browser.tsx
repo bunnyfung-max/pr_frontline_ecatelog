@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowUp,
   ArrowUpRight,
@@ -11,8 +11,18 @@ import {
 } from 'lucide-react';
 import type { Catalog, Content, Folder, Scene } from '@/lib/types';
 import { TYPE_LABEL } from '@/lib/types';
-import { byOrder, folderLabel, trail, type SearchResults } from '@/lib/catalog';
-import { api } from '@/lib/client';
+import {
+  byOrder,
+  folderHasBrowseableContent,
+  folderLabel,
+  parseSearchQuery,
+  SEARCH_CATEGORIES,
+  SEARCH_CATEGORY_LABEL,
+  suggestForCategory,
+  trail,
+} from '@/lib/catalog';
+import { formatCategoryQuery, useCatalogSearch } from '@/hooks/use-catalog-search';
+import type { SearchCategory } from '@/lib/catalog-search';
 import { Thumb } from './ui';
 
 export function FrontlineBrowser({
@@ -31,143 +41,197 @@ export function FrontlineBrowser({
   open: (content: Content) => void;
 }) {
   const [input, setInput] = useState(query);
-  const [result, setResult] = useState<SearchResults | null>(null);
-  const [error, setError] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [retry, setRetry] = useState(0);
+  const [searchText, setSearchText] = useState(query);
+  const [activeCategory, setActiveCategory] = useState<SearchCategory | null>(null);
+  const [suggestionTerm, setSuggestionTerm] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
   const home = !folder;
-  useEffect(() => setInput(query), [query]);
+  const folderId = folder?.id ?? null;
+
+  const {
+    results,
+    facets,
+    resetFacets,
+    toggleFacetSpace,
+    toggleFacetBrand,
+    toggleFacetEshop,
+    vocabulary,
+    scope,
+    active: searching,
+  } = useCatalogSearch(data, folderId, searchText, { debounceMs: 0 });
+  const pendingSearch = input.trim() !== searchText.trim();
+
   useEffect(() => {
-    setResult(null);
-    setError('');
-    if (!query.trim()) {
-      setBusy(false);
-      return;
-    }
-    const controller = new AbortController();
-    setBusy(true);
-    const params = new URLSearchParams({ q: query });
-    if (folder) params.set('folder', folder.id);
-    api<SearchResults>(`/api/catalog?${params}`, { signal: controller.signal })
-      .then((value) => {
-        if (!controller.signal.aborted) setResult(value);
-      })
-      .catch((e) => {
-        if (!controller.signal.aborted) setError(e.message);
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setBusy(false);
-      });
-    return () => controller.abort();
-  }, [query, folder?.id, retry]);
-  const searching = !!query.trim();
-  const folders = data.folders.filter((f) => f.parentId === (folder?.id ?? null)).sort(byOrder);
-  const contents = data.contents
-    .filter((c) => c.folderId === folder?.id && c.status === 'published')
-    .sort(byOrder);
-  const scenes = folder?.id === 'scenes' ? data.scenes.filter((s) => s.active).sort(byOrder) : [];
-  const total = result ? result.contents.length + result.folders.length + result.scenes.length : 0;
-  const path = (id: string) => trail(data.folders, id).map(folderLabel).join(' / ');
-  const hints = ['產品', '品牌', '顏色', '風格', '屋苑'];
+    setInput(query);
+    setSearchText(query);
+  }, [query]);
+  useEffect(() => {
+    if (input === query) return;
+    const timer = setTimeout(() => {
+      const trimmed = input.trim();
+      setSearchText(trimmed);
+      onSearch(trimmed);
+    }, 280);
+    return () => clearTimeout(timer);
+  }, [input, onSearch, query]);
+  useEffect(() => {
+    if (!searchText.trim()) resetFacets();
+  }, [searchText, resetFacets]);
+
+  const parsed = useMemo(() => parseSearchQuery(input), [input]);
+  const suggestions = useMemo(() => {
+    const category = activeCategory ?? parsed.category;
+    if (!category) return [];
+    const prefix = parsed.category === category ? parsed.terms.join(' ') : suggestionTerm;
+    return suggestForCategory(vocabulary, category, prefix, 8);
+  }, [activeCategory, parsed, suggestionTerm, vocabulary]);
+
+  const applyQuery = (value: string) => {
+    const trimmed = value.trim();
+    setInput(trimmed);
+    setSearchText(trimmed);
+    onSearch(trimmed);
+  };
+
+  const applySuggestion = (category: SearchCategory, term: string) => {
+    applyQuery(formatCategoryQuery(category, term));
+    setActiveCategory(null);
+    setSuggestionTerm('');
+  };
+
   const submit = () => {
     if (!input.trim()) {
       inputRef.current?.focus();
       return;
     }
-    if (input.trim() === query) setRetry((n) => n + 1);
-    else onSearch(input.trim());
+    applyQuery(input);
   };
+
+  const folders = data.folders
+    .filter((f) => f.parentId === (folder?.id ?? null))
+    .sort((a, b) => {
+      const aReady = folderHasBrowseableContent(data, a.id);
+      const bReady = folderHasBrowseableContent(data, b.id);
+      if (aReady !== bReady) return aReady ? -1 : 1;
+      return byOrder(a, b);
+    });
+  const contents = data.contents
+    .filter((c) => c.folderId === folder?.id && c.status === 'published')
+    .sort(byOrder);
+  const scenes = folder?.id === 'scenes' ? data.scenes.filter((s) => s.active).sort(byOrder) : [];
+  const total = results
+    ? results.contents.length + results.folders.length + results.scenes.length
+    : 0;
+  const path = (id: string) => trail(data.folders, id).map(folderLabel).join(' / ');
+
   const directory = (items: Folder[], cards = false) => (
     <div className={`directory-grid${cards ? ' folder-card-grid' : ''}`}>
-      {items.map((f) => (
-        <button
-          className={`directory-entry${cards ? ' folder-tile' : ''}`}
-          key={f.id}
-          onClick={() => navigate(f.id)}
-        >
-          {cards && (
-            <span className="folder-tile-icon" aria-hidden="true">
-              <FolderIcon size={22} strokeWidth={1.5} />
-            </span>
-          )}
-          <span>
-            <strong>
-              {folderLabel(f)}
-              {cards && f.id === 'housing' && f.name === 'New Housing' && (
-                <span className="folder-tile-alias">New Housing</span>
-              )}
-            </strong>
-            {!cards && f.id === 'housing' && f.name === 'New Housing' && <small>New Housing</small>}
+      {items.map((f) => {
+        const hasContent = folderHasBrowseableContent(data, f.id);
+        const childFolders = data.folders.filter((child) => child.parentId === f.id).length;
+        const directContents =
+          data.contents.filter((c) => c.folderId === f.id && c.status === 'published').length +
+          (f.id === 'scenes' ? data.scenes.filter((s) => s.active).length : 0);
+        return (
+          <button
+            className={`directory-entry${cards ? ' folder-tile' : ''}${cards && hasContent ? ' folder-tile-ready' : ''}${cards && !hasContent ? ' folder-tile-empty' : ''}`}
+            key={f.id}
+            onClick={() => navigate(f.id)}
+          >
             {cards && (
-              <small>
-                {data.folders.filter((child) => child.parentId === f.id).length} 個資料夾 ·{' '}
-                {data.contents.filter((c) => c.folderId === f.id && c.status === 'published')
-                  .length +
-                  (f.id === 'scenes' ? data.scenes.filter((s) => s.active).length : 0)}{' '}
-                項內容
-              </small>
+              <span className="folder-tile-icon" aria-hidden="true">
+                <FolderIcon size={22} strokeWidth={1.5} />
+              </span>
             )}
-            {searching && <small>{path(f.id)}</small>}
-          </span>
-          <ChevronRight size={18} aria-hidden="true" />
-        </button>
-      ))}
+            <span>
+              <strong>
+                {folderLabel(f)}
+                {cards && f.id === 'housing' && f.name === 'New Housing' && (
+                  <span className="folder-tile-alias">New Housing</span>
+                )}
+              </strong>
+              {!cards && f.id === 'housing' && f.name === 'New Housing' && <small>New Housing</small>}
+              {cards && (
+                <small>
+                  {hasContent
+                    ? `${childFolders} 個資料夾 · ${directContents} 項內容`
+                    : '暫無內容'}
+                </small>
+              )}
+              {searching && <small>{path(f.id)}</small>}
+            </span>
+            <ChevronRight size={18} aria-hidden="true" />
+          </button>
+        );
+      })}
     </div>
   );
+
   const sceneList = (items: Scene[]) => {
     if (!items.length) return null;
     return (
-    <div className="directory-grid">
-      {items.map((s) =>
-        s.url ? (
-          <a
-            className="directory-entry"
-            key={s.id}
-            href={s.url}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <span>
-              <strong>{s.name}</strong>
-              <small>開啟 eShop 推介</small>
-            </span>
-            <ArrowUpRight size={18} aria-hidden="true" />
-          </a>
-        ) : (
-          <div className="directory-entry unconfigured" key={s.id} aria-disabled="true">
-            <span>
-              <strong>{s.name}</strong>
-              <small>連結待設定</small>
-            </span>
-          </div>
-        ),
-      )}
-    </div>
+      <div className="directory-grid">
+        {items.map((s) =>
+          s.url ? (
+            <a
+              className="directory-entry"
+              key={s.id}
+              href={s.url}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <span>
+                <strong>{s.name}</strong>
+                <small>開啟 eShop 推介</small>
+              </span>
+              <ArrowUpRight size={18} aria-hidden="true" />
+            </a>
+          ) : (
+            <div className="directory-entry unconfigured" key={s.id} aria-disabled="true">
+              <span>
+                <strong>{s.name}</strong>
+                <small>連結待設定</small>
+              </span>
+            </div>
+          ),
+        )}
+      </div>
     );
   };
-  const contentList = (items: Content[]) => {
+
+  const contentList = (items: { item: Content; reasons: { label: string; value: string }[] }[]) => {
     if (!items.length) return null;
     return (
-    <div className="search-content-list">
-      {items.map((c) => (
-        <button className="search-content-entry" key={c.id} onClick={() => open(c)}>
-          <div className="search-thumbnail">
-            <Thumb src={c.cover || (c.type === 'image' ? c.files[0] : '')} />
-          </div>
-          <div className="search-content-copy">
-            <small>
-              {c.salesKit ? 'Sales Kit' : TYPE_LABEL[c.type]} · {path(c.folderId)}
-            </small>
-            <h3>{c.name}</h3>
-            <span>開啟展示</span>
-          </div>
-          <ChevronRight size={18} aria-hidden="true" />
-        </button>
-      ))}
-    </div>
+      <div className="search-content-list">
+        {items.map(({ item: c, reasons }) => (
+          <button className="search-content-entry" key={c.id} onClick={() => open(c)}>
+            <div className="search-thumbnail">
+              <Thumb src={c.cover || (c.type === 'image' ? c.files[0] : '')} />
+            </div>
+            <div className="search-content-copy">
+              <small>
+                {c.salesKit ? 'Sales Kit' : TYPE_LABEL[c.type]} · {path(c.folderId)}
+              </small>
+              <h3>{c.name}</h3>
+              {reasons.length > 0 && (
+                <p className="search-match-reasons">
+                  {reasons.map((reason) => `${reason.label}：${reason.value}`).join(' · ')}
+                </p>
+              )}
+              <span>開啟展示</span>
+            </div>
+            <ChevronRight size={18} aria-hidden="true" />
+          </button>
+        ))}
+      </div>
     );
   };
+
+  const folderResults = results?.folders.map((entry) => entry.item) ?? [];
+  const sceneResults = results?.scenes.map((entry) => entry.item) ?? [];
+  const facetSpaces = results?.availableFacets.spaces.slice(0, 8) ?? [];
+  const facetBrands = results?.availableFacets.brands.slice(0, 8) ?? [];
+
   return (
     <section
       className={`frontline-browser ${home ? 'search-home' : 'search-folder'}`}
@@ -192,7 +256,15 @@ export function FrontlineBrowser({
             <input
               ref={inputRef}
               value={input}
-              onChange={(e) => setInput(e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value;
+                setInput(value);
+                setSuggestionTerm(value);
+                if (!value.trim()) {
+                  setSearchText('');
+                  onSearch('');
+                }
+              }}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && e.nativeEvent.isComposing) e.preventDefault();
               }}
@@ -210,6 +282,8 @@ export function FrontlineBrowser({
                 aria-label="清除"
                 onClick={() => {
                   setInput('');
+                  setActiveCategory(null);
+                  resetFacets();
                   onSearch('');
                   inputRef.current?.focus();
                 }}
@@ -222,83 +296,140 @@ export function FrontlineBrowser({
             </button>
           </div>
           {home && (
-            <div id="search-hint" className="search-chips" aria-label="搜尋建議">
-              {hints.map((hint) => (
+            <div id="search-hint" className="search-chips" aria-label="搜尋分類">
+              {SEARCH_CATEGORIES.map((category) => (
                 <button
-                  key={hint}
+                  key={category}
                   type="button"
-                  className="search-chip"
+                  className={`search-chip${activeCategory === category || parsed.category === category ? ' search-chip-active' : ''}`}
                   onClick={() => {
-                    setInput(hint);
-                    onSearch(hint);
+                    setActiveCategory(category);
+                    setSuggestionTerm('');
+                    setInput(formatCategoryQuery(category, ''));
+                    inputRef.current?.focus();
                   }}
                 >
-                  {hint}
+                  {SEARCH_CATEGORY_LABEL[category]}
                 </button>
               ))}
             </div>
+          )}
+          {suggestions.length > 0 && (activeCategory || parsed.category) && (
+            <ul className="search-suggestions" aria-label="建議搜尋詞">
+              {suggestions.map((term) => {
+                const category = (activeCategory ?? parsed.category)!;
+                return (
+                  <li key={`${category}-${term}`}>
+                    <button type="button" onClick={() => applySuggestion(category, term)}>
+                      <strong>{SEARCH_CATEGORY_LABEL[category]}</strong>
+                      <span>{term}</span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
           )}
         </form>
       </div>
       {!home && (
         <p className="search-scope" id="search-scope">
-          只搜尋「{folderLabel(folder)}」及下層目錄
+          只搜尋「{folderLabel(folder)}」及下層目錄 · 共 {scope.contentCount} 項可搜內容
+        </p>
+      )}
+      {home && searching && (
+        <p className="search-scope search-scope-home">
+          搜尋範圍：全部目錄 · 共 {scope.contentCount} 項可搜內容
         </p>
       )}
       {searching ? (
-        <section className="search-results" aria-labelledby="results-heading" aria-busy={busy}>
+        <section className="search-results" aria-labelledby="results-heading" aria-busy={pendingSearch}>
           <div className="results-heading">
             <h2 id="results-heading">搜尋結果</h2>
             <button
               className="search-clear"
               onClick={() => {
                 setInput('');
+                setActiveCategory(null);
+                resetFacets();
                 onSearch('');
               }}
             >
               返回目錄
             </button>
           </div>
-          <p className="result-summary" role="status">
-            {busy
-              ? '搜尋中…'
-              : error
-                ? '未能完成搜尋'
-                : result
-                  ? `「${query}」找到 ${total} 項結果`
-                  : '準備搜尋…'}
-          </p>
-          {error && (
-            <div className="search-message">
-              <p role="alert">{error}</p>
-              <button className="secondary" onClick={() => setRetry((n) => n + 1)}>
-                重新搜尋
+          {(facetSpaces.length > 0 || facetBrands.length > 0) && (
+            <div className="search-facets" aria-label="篩選條件">
+              {facetSpaces.length > 0 && (
+                <div className="search-facet-group">
+                  <span className="search-facet-label">空間</span>
+                  <div className="search-facet-chips">
+                    {facetSpaces.map((space) => (
+                      <button
+                        key={space}
+                        type="button"
+                        className={`search-facet-chip${facets.spaces.includes(space) ? ' active' : ''}`}
+                        onClick={() => toggleFacetSpace(space)}
+                      >
+                        {space}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {facetBrands.length > 0 && (
+                <div className="search-facet-group">
+                  <span className="search-facet-label">品牌</span>
+                  <div className="search-facet-chips">
+                    {facetBrands.map((brand) => (
+                      <button
+                        key={brand}
+                        type="button"
+                        className={`search-facet-chip${facets.brands.includes(brand) ? ' active' : ''}`}
+                        onClick={() => toggleFacetBrand(brand)}
+                      >
+                        {brand}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <button
+                type="button"
+                className={`search-facet-chip search-facet-toggle${facets.hasEshop ? ' active' : ''}`}
+                onClick={toggleFacetEshop}
+              >
+                有 eShop 產品
               </button>
             </div>
           )}
-          {!busy &&
-            !error &&
-            result &&
+          <p className="result-summary" role="status">
+            {pendingSearch
+              ? '搜尋中…'
+              : searchText.trim()
+                ? `「${searchText}」找到 ${total} 項結果`
+                : `已篩選 ${total} 項結果`}
+          </p>
+          {!pendingSearch &&
             (total ? (
               <>
-                {result.contents.length > 0 && contentList(result.contents)}
-                {result.folders.length > 0 && (
+                {results!.contents.length > 0 && contentList(results!.contents)}
+                {folderResults.length > 0 && (
                   <>
                     <h3 className="result-group-title">相關目錄</h3>
-                    {directory(result.folders)}
+                    {directory(folderResults)}
                   </>
                 )}
-                {result.scenes.length > 0 && (
+                {sceneResults.length > 0 && (
                   <>
                     <h3 className="result-group-title">場景推介</h3>
-                    {sceneList(result.scenes)}
+                    {sceneList(sceneResults)}
                   </>
                 )}
               </>
             ) : (
               <div className="search-message">
                 <h3>找不到相關內容</h3>
-                <p>試試較短的關鍵字，例如「梳化」或「米白色」。</p>
+                <p>試試較短的關鍵字，例如「梳化」或「米白色」，或點選上方分類查看建議詞。</p>
                 {!home && <p>搜尋不會擴大至其他目錄。</p>}
               </div>
             ))}
@@ -308,7 +439,7 @@ export function FrontlineBrowser({
           <h2>{home ? '或直接瀏覽目錄' : '瀏覽此目錄'}</h2>
           {directory(folders, true)}
           {sceneList(scenes)}
-          {contentList(contents)}
+          {contentList(contents.map((item) => ({ item, reasons: [] })))}
           {!folders.length && !scenes.length && !contents.length && (
             <div className="search-message">
               <h3>此目錄暫未有內容</h3>

@@ -9,6 +9,7 @@ import {
   activeOffer,
   cacheableAssetRefs,
   folderPublishedContents,
+  folderHasBrowseableContent,
   allowedAssetRefs,
   catalogAssetRefs,
 } from '../src/lib/catalog';
@@ -24,7 +25,7 @@ test('home has exactly five roots; weekly summary never seeded', () => {
     d.folders.some((f) => f.name === 'Weekly Eposter'),
     true,
   );
-  assert.equal(d.contents.length, 49);
+  assert.equal(d.contents.length, 2);
   assert.equal(d.products.length, 0);
   assert.equal(d.scenes.length, 6);
 });
@@ -111,18 +112,17 @@ test('draft asset refs require CMS unlock; published refs stay visible', () => {
   assert.ok(unlocked.includes('asset:draft-only.jpg'));
   assert.ok(unlocked.includes('asset:draft-cover.png'));
 });
-test('cacheable assets include local files but skip external links', () => {
+test('cacheable assets include uploaded refs but skip demo fixtures and external links', () => {
   const d = initialCatalog(true);
   const kit = d.contents.find((c) => c.id === 'kit-a')!;
-  assert.equal(cacheableAssetRefs(kit).length, 5);
+  assert.equal(cacheableAssetRefs(kit).length, 0);
   assert.equal(
     cacheableAssetRefs({
       ...kit,
-      type: 'link',
-      files: ['https://example.com/promo'],
-      cover: '',
+      files: ['asset:plan.png', 'https://example.com/promo'],
+      cover: 'asset:cover.png',
     }).length,
-    0,
+    2,
   );
 });
 test('rotation preserves current position and never duplicates odd last page', () => {
@@ -171,4 +171,17 @@ test('content type enforces file formats and non-image single asset', () => {
     schemas.content.safeParse({ ...c, type: 'pdf', files: ['asset:a.pdf', 'asset:b.pdf'] }).success,
     false,
   );
+});
+test('folderHasBrowseableContent checks published descendants and active scenes', () => {
+  const data = initialCatalog(true);
+  assert.equal(folderHasBrowseableContent(data, 'public'), true);
+  assert.equal(folderHasBrowseableContent(data, 'housing'), true);
+  data.contents = data.contents.filter(
+    (item) => item.folderId !== 'unit-a' && item.folderId !== 'unit-b',
+  );
+  assert.equal(folderHasBrowseableContent(data, 'private'), false);
+  data.scenes.forEach((scene) => {
+    scene.active = false;
+  });
+  assert.equal(folderHasBrowseableContent(data, 'scenes'), false);
 });

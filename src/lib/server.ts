@@ -76,6 +76,14 @@ export function assertSameOrigin(request: Request) {
     throw new HttpError(403, '不接受跨網站請求。');
 }
 
+export async function readJsonBody<T = unknown>(request: Request): Promise<T> {
+  try {
+    return (await request.json()) as T;
+  } catch {
+    throw new HttpError(400, '請提供有效的請求資料。');
+  }
+}
+
 export function failure(error: unknown) {
   const status = error instanceof HttpError ? error.status : 500;
   return Response.json(

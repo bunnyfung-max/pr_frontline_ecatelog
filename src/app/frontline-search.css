@@ -213,6 +213,108 @@
   background: var(--pr-green-soft);
   color: var(--pr-green-hover);
 }
+.search-chip-active {
+  background: var(--pr-green-soft);
+  color: var(--pr-green-hover);
+  box-shadow: inset 0 0 0 1px rgba(0, 104, 71, 0.18);
+}
+
+.search-scope-home {
+  margin: 10px 0 0;
+  text-align: center;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.search-suggestions {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+}
+.search-suggestions li button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 12px;
+  text-align: left;
+}
+.search-suggestions li button:hover {
+  background: #f8faf9;
+}
+.search-suggestions strong {
+  flex: 0 0 auto;
+  font-size: 12px;
+  color: var(--muted);
+}
+.search-suggestions span {
+  font-size: 14px;
+  color: var(--ink);
+}
+
+.search-facets {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0 0 14px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #fafbfc;
+}
+.search-facet-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.search-facet-label {
+  flex: 0 0 40px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.search-facet-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.search-facet-chip {
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: #fff;
+  font-size: 12px;
+  color: var(--ink);
+}
+.search-facet-chip.active,
+.search-facet-toggle.active {
+  border-color: rgba(0, 104, 71, 0.28);
+  background: var(--pr-green-soft);
+  color: var(--pr-green-hover);
+}
+
+.search-match-reasons {
+  margin: 4px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.cms-search-chips {
+  justify-content: flex-start;
+  margin-top: 10px;
+}
+.cms-search-suggestions {
+  margin-top: 10px;
+}
+.cms-search-facets {
+  margin-top: 12px;
+}
 
 .frontline button:focus-visible,
 .frontline a:focus-visible {
@@ -339,6 +441,47 @@ a.directory-entry:hover {
   height: 16px;
   color: #bdc1c6;
 }
+.frontline-browser .directory-entry.folder-tile-ready {
+  border-color: #b7dfc3;
+  background: #fff;
+}
+.frontline-browser .folder-tile-ready:hover {
+  border-color: #8bc99a;
+  background: #f8fcf9;
+  box-shadow: 0 1px 6px rgba(26, 127, 55, 0.08);
+}
+.frontline-browser .folder-tile-ready > .folder-tile-icon {
+  background: var(--pr-green-soft);
+  color: var(--pr-green);
+  box-shadow: inset 0 0 0 1px rgba(26, 127, 55, 0.12);
+}
+.frontline-browser .folder-tile-ready strong {
+  color: #1f2933;
+}
+.frontline-browser .directory-entry.folder-tile-empty {
+  background: #f6f7f8;
+  border-color: #e3e6ea;
+  border-style: dashed;
+}
+.frontline-browser .folder-tile-empty:hover {
+  background: #f1f3f4;
+  border-color: #d7dbe0;
+  box-shadow: none;
+}
+.frontline-browser .folder-tile-empty > .folder-tile-icon {
+  background: #eceef1;
+  color: #9aa0a6;
+}
+.frontline-browser .folder-tile-empty strong {
+  color: #80868b;
+  font-weight: 500;
+}
+.frontline-browser .folder-tile-empty small {
+  color: #9aa0a6;
+}
+.frontline-browser .folder-tile-empty > svg {
+  color: #d0d4d8;
+}
 .folder-tile-alias {
   display: inline-block;
   margin-left: 6px;
@@ -394,6 +537,40 @@ a.directory-entry:hover {
   flex-direction: column;
   align-items: flex-end;
   gap: 6px;
+}
+.topbar-cache {
+  position: relative;
+  align-items: center;
+}
+.topbar-cache .cache-toggle {
+  min-height: 34px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--muted);
+  background: transparent;
+  border: none;
+  gap: 8px;
+}
+.topbar-cache .cache-toggle:hover:not(:disabled) {
+  background: #f1f3f4;
+  color: var(--ink);
+}
+.topbar-cache .cache-toggle.selected {
+  background: #eef3ea;
+  color: #45563c;
+}
+.topbar-cache .folder-cache-error {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  width: max-content;
+  max-width: min(320px, 70vw);
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
 }
 .folder-cache-error {
   margin: 0;

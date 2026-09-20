@@ -1,8 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="900" height="1100" viewBox="0 0 900 1100">
   <rect width="900" height="1100" fill="#f8f6f0"/>
   <text x="70" y="72" font-size="12" letter-spacing="3" fill="#8b967a" font-family="sans-serif">NEW HOUSING / FLOOR PLAN</text>
-  <text x="70" y="138" font-size="32" fill="#4f5f40" font-family="Microsoft JhengHei,sans-serif">®Msb:</text>
-  <text x="70" y="182" font-size="14" fill="#8f977f" font-family="Microsoft JhengHei,sans-serif">U:( placeholder · …åc PÖã</text>
+  <text x="70" y="138" font-size="32" fill="#4f5f40" font-family="Microsoft JhengHei,sans-serif">ï¿½Msb:</text>
+  <text x="70" y="182" font-size="14" fill="#8f977f" font-family="Microsoft JhengHei,sans-serif">U:( placeholder ï¿½ ï¿½ï¿½c Pï¿½ï¿½</text>
   <rect x="110" y="250" width="680" height="620" fill="#ede8d8" stroke="#677757" stroke-width="8" rx="4"/>
   <path d="M450 250V520H790M110 560H450V820" stroke="#677757" stroke-width="7" fill="none"/>
   <rect x="140" y="300" width="130" height="200" rx="8" fill="#c8d4b4"/>
@@ -11,10 +11,10 @@
   <rect x="500" y="560" width="180" height="200" rx="4" fill="#d9dfcd"/>
   <circle cx="640" cy="680" r="28" fill="#d9dfcd"/>
   <text x="205" y="410" font-size="18" fill="#808c6d" text-anchor="middle" font-family="Microsoft JhengHei,sans-serif">a?</text>
-  <text x="590" y="400" font-size="18" fill="#808c6d" text-anchor="middle" font-family="Microsoft JhengHei,sans-serif">¢ó</text>
-  <text x="280" y="685" font-size="18" fill="#808c6d" text-anchor="middle" font-family="Microsoft JhengHei,sans-serif">Ú?</text>
-  <text x="590" y="680" font-size="18" fill="#808c6d" text-anchor="middle" font-family="Microsoft JhengHei,sans-serif">t¤</text>
+  <text x="590" y="400" font-size="18" fill="#808c6d" text-anchor="middle" font-family="Microsoft JhengHei,sans-serif">ï¿½ï¿½</text>
+  <text x="280" y="685" font-size="18" fill="#808c6d" text-anchor="middle" font-family="Microsoft JhengHei,sans-serif">ï¿½?</text>
+  <text x="590" y="680" font-size="18" fill="#808c6d" text-anchor="middle" font-family="Microsoft JhengHei,sans-serif">tï¿½</text>
   <rect x="69" y="930" width="762" height="58" rx="4" fill="#ecefe3"/>
-  <text x="92" y="965" font-size="13" fill="#869573" font-family="Microsoft JhengHei,sans-serif">dº:sb&^ûUæKÑ-úp</text>
+  <text x="92" y="965" font-size="13" fill="#869573" font-family="Microsoft JhengHei,sans-serif">dï¿½:sb&^ï¿½Uï¿½Kï¿½-ï¿½p</text>
   <text x="70" y="1048" font-size="12" fill="#9a9f8b" font-family="sans-serif">PRICERITE FRONTLINE / PLACEHOLDER</text>
 </svg>

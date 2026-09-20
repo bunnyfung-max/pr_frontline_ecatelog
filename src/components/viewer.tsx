@@ -1,16 +1,13 @@
 'use client';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   ArrowLeft,
   ChevronLeft,
   ChevronRight,
   ShoppingBag,
   X,
-  ZoomIn,
-  ZoomOut,
   ExternalLink,
-  Maximize,
-  Minimize,
 } from 'lucide-react';
 import type { PDFDocumentProxy } from 'pdfjs-dist';
 import type { Catalog, Content } from '@/lib/types';
@@ -24,6 +21,7 @@ import {
   type ReaderLeaf,
 } from '@/lib/sales-kit';
 import { useContentAssetCache } from '@/hooks/use-content-cache';
+import { usePinchZoom } from '@/hooks/use-pinch-zoom';
 import { External, Thumb } from './ui';
 import { ContentShoppingLinks, useEshopProductPrices } from './shopping-links';
 export function Viewer({
@@ -37,15 +35,15 @@ export function Viewer({
   close: () => void;
   previewOrientation?: 'landscape' | 'portrait';
 }) {
-  const dialog = useRef<HTMLDialogElement>(null);
   const [landscape, setLandscape] = useState(true);
   const [page, setPage] = useState(1);
-  const [zoom, setZoom] = useState(1);
   const [panel, setPanel] = useState(false);
-  const [fullscreen, setFullscreen] = useState(false);
   const [pdfs, setPdfs] = useState<Record<string, PDFDocumentProxy>>({});
   const [pdfReady, setPdfReady] = useState(false);
   const [reload, setReload] = useState(0);
+  const [mounted, setMounted] = useState(false);
+  const closeRef = useRef(close);
+  closeRef.current = close;
   const assets = useMemo(
     () => readerAssets(content),
     [content.files, content.type, content.salesKit],
@@ -53,23 +51,27 @@ export function Viewer({
   const eshopPrices = useEshopProductPrices(content.eshopProducts ?? []);
   const { resolveAssetUrl } = useContentAssetCache(content);
   useEffect(() => {
-    const el = dialog.current;
-    el?.showModal();
+    setMounted(true);
+  }, []);
+  useEffect(() => {
     const media = matchMedia('(orientation: landscape)');
     const update = () => setLandscape(media.matches);
     update();
     media.addEventListener('change', update);
-    const onFullscreen = () => setFullscreen(!!document.fullscreenElement);
-    document.addEventListener('fullscreenchange', onFullscreen);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') closeRef.current();
+    };
+    window.addEventListener('keydown', onKeyDown);
     return () => {
       media.removeEventListener('change', update);
-      document.removeEventListener('fullscreenchange', onFullscreen);
-      el?.close();
+      window.removeEventListener('keydown', onKeyDown);
+      document.body.style.overflow = previousOverflow;
     };
   }, []);
   useEffect(() => {
     setPage(1);
-    setZoom(1);
   }, [assets]);
   useEffect(() => {
     let cancelled = false;
@@ -127,28 +129,27 @@ export function Viewer({
   const pages = readerSpread(leaves, page, horizontal);
   const current = leaves[pages[0] - 1];
   const loading = assets.some((asset) => asset.kind === 'pdf') && !pdfReady;
-  const canZoom =
-    !loading && current && !current.failed && (current.kind === 'image' || current.kind === 'pdf');
+  const { scale, targetRef: pinchRef } = usePinchZoom(page);
   const navigate = (next: number) => {
     setPage(next);
-    setZoom(1);
   };
-  const closeViewer = () => {
-    if (document.fullscreenElement) void document.exitFullscreen();
-    close();
+  const handleClose = () => {
+    closeRef.current();
   };
-  return (
-    <dialog
-      ref={dialog}
+  const markup = (
+    <div
+      role="dialog"
+      aria-modal="true"
       className={`viewer ${horizontal ? 'landscape' : 'portrait'} ${panel ? 'panel-open' : ''} ${previewOrientation ? 'is-preview' : ''}`}
-      onCancel={(e) => {
-        e.preventDefault();
-        closeViewer();
-      }}
       aria-label={`${content.name} 閱讀器`}
     >
       <header className="viewer-top">
-        <button className="subtle viewer-back" onClick={closeViewer} aria-label="返回目錄">
+        <button
+          type="button"
+          className="subtle viewer-back"
+          onClick={handleClose}
+          aria-label="返回目錄"
+        >
           <ArrowLeft size={17} />
           <span className="viewer-back-label">返回</span>
         </button>
@@ -173,40 +174,41 @@ export function Viewer({
       </header>
       <div className="viewer-body">
         <section className="reader-area" aria-label="展示內容">
-          <div className="reader-scroll">
+          <div className="reader-scroll reader-pinch" ref={pinchRef}>
             {loading ? (
               <div className="loading" role="status">
                 正在載入 PDF 頁次…
               </div>
             ) : current?.kind === 'image' || current?.kind === 'pdf' ? (
               <div
-                className={`page-spread ${zoom > 1 ? 'zoomed' : ''}`}
-                data-testid="page-spread"
-                style={{ width: `${zoom * 100}%`, minWidth: '100%' }}
+                className={`page-spread-host${scale > 1 ? ' is-zoomed' : ''}`}
+                style={scale > 1 ? { width: `${scale * 100}%`, minWidth: '100%' } : undefined}
               >
-                {pages.map((n) => {
-                  const leaf = leaves[n - 1];
-                  return (
-                    <div
-                      className="paper"
-                      key={`${n}-${reload}`}
-                      data-page={n}
-                      data-file-kind={leaf.kind}
-                      data-file-label={leaf.label}
-                    >
-                      <ReaderPageMedia
-                        contentName={content.name}
-                        leaf={leaf}
-                        page={n}
-                        pdf={leaf.kind === 'pdf' ? pdfs[leaf.ref] : undefined}
-                        reload={reload}
-                        resolveAssetUrl={resolveAssetUrl}
-                        onRetry={() => setReload((k) => k + 1)}
-                      />
-                      <span className="paper-number">{n}</span>
-                    </div>
-                  );
-                })}
+                <div className="page-spread" data-testid="page-spread">
+                  {pages.map((n) => {
+                    const leaf = leaves[n - 1];
+                    return (
+                      <div
+                        className="paper"
+                        key={`${n}-${reload}`}
+                        data-page={n}
+                        data-file-kind={leaf.kind}
+                        data-file-label={leaf.label}
+                      >
+                        <ReaderPageMedia
+                          contentName={content.name}
+                          leaf={leaf}
+                          page={n}
+                          pdf={leaf.kind === 'pdf' ? pdfs[leaf.ref] : undefined}
+                          reload={reload}
+                          resolveAssetUrl={resolveAssetUrl}
+                          onRetry={() => setReload((k) => k + 1)}
+                        />
+                        <span className="paper-number">{n}</span>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             ) : current?.kind === 'video' ? (
               <ReaderPageMedia
@@ -250,42 +252,6 @@ export function Viewer({
                 onClick={() => navigate(Math.min(total, pages.at(-1)! + 1))}
               >
                 <ChevronRight size={18} />
-              </button>
-            </div>
-            <div className="reader-toolbar-tools">
-              <div className="zoom-controls">
-                <button
-                  className="icon-btn"
-                  aria-label="縮小"
-                  disabled={zoom <= 1 || !canZoom}
-                  onClick={() => setZoom((z) => Math.max(1, z - 0.25))}
-                >
-                  <ZoomOut size={17} />
-                </button>
-                <button className="zoom-reset" onClick={() => setZoom(1)} aria-label="重設縮放">
-                  {Math.round(zoom * 100)}%
-                </button>
-                <button
-                  className="icon-btn"
-                  aria-label="放大"
-                  disabled={zoom >= 2.5 || !canZoom}
-                  onClick={() => setZoom((z) => Math.min(2.5, z + 0.25))}
-                >
-                  <ZoomIn size={17} />
-                </button>
-              </div>
-              <button
-                className="icon-btn fullscreen-control"
-                aria-label={fullscreen ? '退出全螢幕' : '全螢幕'}
-                onClick={() => {
-                  if (document.fullscreenElement) void document.exitFullscreen();
-                  else
-                    void dialog.current
-                      ?.requestFullscreen?.()
-                      .catch(() => undefined);
-                }}
-              >
-                {fullscreen ? <Minimize size={17} /> : <Maximize size={17} />}
               </button>
             </div>
           </div>
@@ -338,8 +304,10 @@ export function Viewer({
           </aside>
         )}
       </div>
-    </dialog>
+    </div>
   );
+  if (!mounted) return null;
+  return createPortal(markup, document.body);
 }
 function ReaderPageMedia({
   contentName,

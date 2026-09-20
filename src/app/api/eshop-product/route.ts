@@ -1,7 +1,41 @@
-import { failure, HttpError, json, requireSession } from '@/lib/server';
+import { failure, HttpError, json, readJsonBody, requireSession } from '@/lib/server';
 import { requireCmsAccess } from '@/lib/cms-access';
 import { fetchPriceriteProduct, formatHkd } from '@/lib/pricerite-eshop';
+import type { EshopProductSnapshot } from '@/lib/pricerite-eshop';
 import { isPriceriteProductUrl, normalizePriceriteProductUrl } from '@/lib/pricerite-eshop-url';
+
+function emptySnapshot(url: string): EshopProductSnapshot {
+  return {
+    url,
+    title: '',
+    brand: '',
+    sku: '',
+    description: '',
+    image: '',
+    basePrice: null,
+    specialPrice: null,
+    available: false,
+  };
+}
+
+function toLiveSnapshot(snapshot: EshopProductSnapshot) {
+  const price = snapshot.specialPrice ?? snapshot.basePrice;
+  return {
+    ...snapshot,
+    price,
+    priceLabel: formatHkd(price),
+    basePriceLabel: formatHkd(snapshot.basePrice),
+    specialPriceLabel: formatHkd(snapshot.specialPrice),
+  };
+}
+
+async function loadSnapshot(url: string) {
+  try {
+    return toLiveSnapshot(await fetchPriceriteProduct(url));
+  } catch {
+    return toLiveSnapshot(emptySnapshot(url));
+  }
+}
 
 export async function GET(request: Request) {
   try {
@@ -17,20 +51,7 @@ export async function GET(request: Request) {
         throw new HttpError(400, '只接受 Pricerite eShop 產品 HTTPS 連結。');
     }
 
-    const snapshots = await Promise.all(
-      rawUrls.map(async (value) => {
-        const snapshot = await fetchPriceriteProduct(value);
-        const price = snapshot.specialPrice ?? snapshot.basePrice;
-        return {
-          ...snapshot,
-          price,
-          priceLabel: formatHkd(price),
-          basePriceLabel: formatHkd(snapshot.basePrice),
-          specialPriceLabel: formatHkd(snapshot.specialPrice),
-        };
-      }),
-    );
-
+    const snapshots = await Promise.all(rawUrls.map((value) => loadSnapshot(value)));
     return json({ products: snapshots });
   } catch (error) {
     return failure(error);
@@ -40,10 +61,15 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     await requireCmsAccess();
-    const body = (await request.json()) as { url?: string };
+    const body = await readJsonBody<{ url?: string }>(request);
     if (!body.url?.trim()) throw new HttpError(400, '請提供產品連結。');
-    const url = normalizePriceriteProductUrl(body.url.trim());
-    const snapshot = await fetchPriceriteProduct(url);
+    let url = body.url.trim();
+    try {
+      url = normalizePriceriteProductUrl(url);
+    } catch {
+      throw new HttpError(400, '只接受 Pricerite eShop 產品 HTTPS 連結。');
+    }
+    const snapshot = await loadSnapshot(url);
     if (!snapshot.available || !snapshot.title)
       throw new HttpError(404, '找不到此產品，可能已下架或連結不正確。');
     return json({

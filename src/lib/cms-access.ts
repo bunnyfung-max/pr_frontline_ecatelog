@@ -15,6 +15,7 @@ const CMS_UNLOCK_COOKIE = 'cms_unlock';
 export const demoCmsPassword = () => process.env.DEMO_CMS_PASSWORD || DEMO_CMS_PASSWORD_DEFAULT;
 
 export async function isCmsUnlocked(expected?: Session) {
+  if (expected?.role === 'admin') return true;
   const jar = await cookies();
   const token = jar.get(CMS_UNLOCK_COOKIE)?.value;
   if (!token) return false;

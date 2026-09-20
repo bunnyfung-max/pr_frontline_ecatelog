@@ -18,7 +18,14 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import type { Content, ManageKind, Folder as FolderType } from '@/lib/types';
-import { byOrder, trail, folderLabel, rootFolders, folderPublishedContents } from '@/lib/catalog';
+import {
+  byOrder,
+  trail,
+  folderLabel,
+  rootFolders,
+  folderPublishedContents,
+  publishedContents,
+} from '@/lib/catalog';
 import { api } from '@/lib/client';
 import { useCatalogSession } from '@/hooks/use-catalog-session';
 import { useCatalogData } from '@/hooks/use-catalog-data';
@@ -28,7 +35,6 @@ import { Viewer } from '../viewer';
 import { ContentEditor, ManagePanel } from '../cms';
 import { SimpleDirectory } from '../simple-directory';
 import { FrontlineBrowser } from '../frontline-browser';
-import { CmsAccessGate } from '../cms-access-gate';
 import { rootIcons } from './constants';
 import { Login } from './login';
 import { HomePage } from './home-page';
@@ -40,7 +46,8 @@ export function CatalogApp() {
   const params = useSearchParams();
   const folderId = params.get('folder') || '';
   const cmsMode = params.get('cms') === '1';
-  const contentId = params.get('content');
+  const contentParam = params.get('content');
+  const [activeContentId, setActiveContentId] = useState<string | null>(contentParam);
   const searchQuery = params.get('q') || '';
   const {
     session,
@@ -50,29 +57,29 @@ export function CatalogApp() {
     setup,
     ready,
     error: sessionError,
-    lockCms,
   } = useCatalogSession();
+  const hasCmsAccess = session?.role === 'admin' || cmsUnlocked;
   const [refreshKey, setRefreshKey] = useState(0);
   const { data, setData, error: catalogError } = useCatalogData(
     session,
     cmsMode,
-    cmsUnlocked,
+    hasCmsAccess,
     refreshKey,
   );
   const [edit, setEdit] = useState<Content | 'new' | null>(null);
   const [manage, setManage] = useState<ManageKind | ''>('');
   const [newFolder, setNewFolder] = useState(false);
   const [toast, setToast] = useState('');
-  const cms = cmsMode && cmsUnlocked;
+  const cms = cmsMode && hasCmsAccess;
   const error = catalogError || sessionError;
-  useEffect(() => {
-    if (!cmsMode && cmsUnlocked) void lockCms();
-  }, [cmsMode, cmsUnlocked, lockCms]);
   useEffect(() => {
     if (!toast) return;
     const timer = setTimeout(() => setToast(''), 4500);
     return () => clearTimeout(timer);
   }, [toast]);
+  useEffect(() => {
+    setActiveContentId(contentParam);
+  }, [contentParam]);
   const navigate = useCallback(
     (id: string, admin = cmsMode, content?: string) => {
       const p = new URLSearchParams();
@@ -91,11 +98,13 @@ export function CatalogApp() {
     else p.delete('q');
     router.push(`/?${p.toString()}`, { scroll: false });
   };
-  const closeContent = () => {
-    const p = new URLSearchParams(params.toString());
+  const closeContent = useCallback(() => {
+    setActiveContentId(null);
+    const p = new URLSearchParams(window.location.search);
     p.delete('content');
-    router.push(`/?${p.toString()}`, { scroll: false });
-  };
+    const qs = p.toString();
+    router.replace(qs ? `/?${qs}` : '/', { scroll: false });
+  }, [router]);
   const saved = () => {
     setEdit(null);
     setManage('');
@@ -124,9 +133,18 @@ export function CatalogApp() {
         </div>
       </main>
     );
-  if (!session) return <Login onLogin={setSession} initialError={sessionError} />;
+  if (!session)
+    return (
+      <Login
+        onLogin={(next) => {
+          setSession(next);
+          if (next.role === 'admin') setCmsUnlocked(true);
+        }}
+        initialError={sessionError}
+      />
+    );
   const folder = data?.folders.find((f) => f.id === folderId);
-  const current = data?.contents.find((c) => c.id === contentId);
+  const current = data?.contents.find((c) => c.id === activeContentId);
   return (
     <div className={`app-shell ${cms ? 'cms-shell' : 'frontline'}`}>
       <header className="topbar">
@@ -148,6 +166,17 @@ export function CatalogApp() {
               <span />
               內部專用
             </span>
+          )}
+          {!cms && data && (
+            <FolderCacheButton
+              contents={publishedContents(data)}
+              syncScope="published-all"
+              label="下載多媒體離線"
+              readyLabel="多媒體已離線"
+              idleTitle="下載已發布內容的圖片、PDF 及影片到本機，並自動清理已失效檔案。文字及產品資料仍需連線。"
+              readyTitle="多媒體已緩存到本機。文字及產品資料仍需連線。"
+              className="topbar-cache"
+            />
           )}
           {session.role === 'admin' && (
             <button
@@ -211,13 +240,7 @@ export function CatalogApp() {
           </aside>
         )}
         <main className="main">
-          {cmsMode && !cmsUnlocked && session.role === 'admin' ? (
-            <CmsAccessGate
-              demo={session.demo}
-              onUnlock={() => setCmsUnlocked(true)}
-              onCancel={() => navigate(folderId, false)}
-            />
-          ) : error ? (
+          {error ? (
             <div className="empty">
               <h2>未能載入內容</h2>
               <p role="alert">{error}</p>
@@ -365,9 +388,9 @@ export function CatalogApp() {
         </main>
       </div>
       {data &&
-        contentId &&
+        activeContentId &&
         (current ? (
-          <Viewer content={current} data={data} close={closeContent} />
+          <Viewer key={activeContentId} content={current} data={data} close={closeContent} />
         ) : (
           <Modal title="內容未能開啟" close={closeContent}>
             <Empty title="內容不存在、已下架或未發布" />

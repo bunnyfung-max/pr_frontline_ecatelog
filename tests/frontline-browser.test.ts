@@ -21,7 +21,10 @@ function render(data: Catalog, folderId?: string) {
 
 test('homepage uses the same five folder cards, retains search and names, and counts active scenes', () => {
   const html = render(initialCatalog(true));
-  assert.equal((html.match(/class="directory-entry folder-tile"/g) || []).length, 5);
+  assert.equal(
+    (html.match(/class="directory-entry folder-tile folder-tile-(?:ready|empty)"/g) || []).length,
+    5,
+  );
   assert.equal((html.match(/class="folder-tile-icon" aria-hidden="true"/g) || []).length, 5);
   assert.ok(html.includes('搜尋全部銷售資料'));
   assert.ok(html.includes('<span class="folder-tile-alias">New Housing</span>'));
@@ -42,16 +45,26 @@ test('root counts include direct published contents and active scene entries onl
   assert.ok(html.includes('<strong>場景推介</strong><small>0 個資料夾 · 5 項內容</small>'));
 });
 
-test('folder browsing renders three labelled cards with live immediate-child counts', () => {
+test('folder browsing highlights folders with content and mutes empty ones', () => {
   const data = initialCatalog(true);
   const html = render(data, 'housing');
-  assert.equal((html.match(/class="directory-entry folder-tile"/g) || []).length, 3);
+  assert.equal((html.match(/folder-tile-ready/g) || []).length, 2);
+  assert.equal((html.match(/folder-tile-empty/g) || []).length, 1);
   assert.ok(
-    html.includes('<strong>私人屋苑</strong><small>2 個資料夾 · 36 項內容</small>'),
+    html.includes('<strong>私人屋苑</strong><small>2 個資料夾 · 0 項內容</small>'),
   );
-  assert.ok(html.includes('<strong>公居屋</strong><small>0 個資料夾 · 10 項內容</small>'));
-  assert.ok(html.includes('<strong>簡約公屋</strong><small>0 個資料夾 · 3 項內容</small>'));
+  assert.ok(html.includes('<strong>公居屋</strong><small>0 個資料夾 · 2 項內容</small>'));
+  assert.ok(html.includes('<strong>簡約公屋</strong><small>暫無內容</small>'));
   assert.equal((html.match(/class="folder-tile-icon" aria-hidden="true"/g) || []).length, 3);
+});
+
+test('empty folders use muted styling and copy', () => {
+  const data = initialCatalog(true);
+  data.contents = [];
+  const html = render(data, 'housing');
+  assert.equal((html.match(/folder-tile-empty/g) || []).length, 3);
+  assert.ok(html.includes('<strong>私人屋苑</strong><small>暫無內容</small>'));
+  assert.ok(html.includes('<strong>公居屋</strong><small>暫無內容</small>'));
 });
 
 test('folder content counts exclude drafts, archived items and deeper descendants', () => {
@@ -65,7 +78,7 @@ test('folder content counts exclude drafts, archived items and deeper descendant
   );
   assert.ok(
     render(data, 'housing').includes(
-      '<strong>私人屋苑</strong><small>2 個資料夾 · 37 項內容</small>',
+      '<strong>私人屋苑</strong><small>2 個資料夾 · 1 項內容</small>',
     ),
   );
 });

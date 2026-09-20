@@ -1,9 +1,33 @@
 import type { Catalog, Content, Folder, Offer, Scene } from './types';
+import { searchCatalogEnhanced } from './catalog-search';
+
 export interface SearchResults {
   contents: Content[];
   folders: Folder[];
   scenes: Scene[];
 }
+
+export type {
+  EnhancedSearchResults,
+  ParsedSearchQuery,
+  Scored,
+  SearchCategory,
+  SearchFacets,
+  SearchMatchReason,
+  SearchVocabulary,
+} from './catalog-search';
+export {
+  EMPTY_SEARCH_FACETS,
+  SEARCH_CATEGORIES,
+  SEARCH_CATEGORY_LABEL,
+  buildSearchVocabulary,
+  hasActiveFacets,
+  parseSearchQuery,
+  searchCatalogEnhanced,
+  searchScopeSummary,
+  suggestForCategory,
+  vocabularyForCategory,
+} from './catalog-search';
 export const folderLabel = (folder: Folder) =>
   folder.id === 'housing' && folder.name === 'New Housing' ? '新屋入伙' : folder.name;
 export function descendants(folders: Folder[], id: string): Set<string> {
@@ -48,58 +72,12 @@ export function searchCatalog(
   query: string,
   includeDrafts = false,
 ): SearchResults {
-  // Only an explicitly absent folder means home/global search. Invalid IDs fail closed.
-  const scope =
-    folderId === null
-      ? new Set(data.folders.map((f) => f.id))
-      : descendants(data.folders, folderId);
-  const terms = query.trim().normalize('NFKC').toLocaleLowerCase().split(/\s+/).filter(Boolean);
-  const match = (parts: string[]) => {
-    const text = parts.join(' ').normalize('NFKC').toLocaleLowerCase();
-    return terms.every((term) => text.includes(term));
+  const results = searchCatalogEnhanced(data, folderId, query, { includeDrafts });
+  return {
+    contents: results.contents.map((entry) => entry.item),
+    folders: results.folders.map((entry) => entry.item),
+    scenes: results.scenes.map((entry) => entry.item),
   };
-  const contents = data.contents
-    .filter((c) => {
-      if (!scope.has(c.folderId) || (!includeDrafts && c.status !== 'published')) return false;
-      const attributes = data.products
-        .filter((p) => c.productIds.includes(p.id))
-        .flatMap((p) => [p.name, p.code, p.brand, p.colour, p.style, p.keywords]);
-      const eshopAttributes = (c.eshopProducts ?? []).flatMap((p) => [
-        p.title,
-        p.brand,
-        p.sku,
-        p.description,
-      ]);
-      // Only this content's folder path and linked products contribute to a match.
-      return match([
-        c.name,
-        c.fileName,
-        c.keywords,
-        ...(c.tags ?? []),
-        ...eshopAttributes,
-        ...trail(data.folders, c.folderId).flatMap((f) => [f.name, folderLabel(f)]),
-        ...attributes,
-      ]);
-    })
-    .sort(byOrder);
-  const folders = data.folders
-    .filter(
-      (f) =>
-        f.id !== folderId &&
-        scope.has(f.id) &&
-        match([
-          f.name,
-          f.subtitle,
-          ...trail(data.folders, f.id).flatMap((p) => [p.name, folderLabel(p)]),
-        ]),
-    )
-    .sort(byOrder);
-  const scenes = scope.has('scenes')
-    ? data.scenes
-        .filter((s) => (includeDrafts || s.active) && match([s.name, '場景推介']))
-        .sort(byOrder)
-    : [];
-  return { contents, folders, scenes };
 }
 export function activeOffer(offer: Offer, now = new Date()): boolean {
   const today = new Intl.DateTimeFormat('en-CA', {
@@ -150,7 +128,11 @@ export function allowedAssetRefs(data: Catalog, cmsUnlocked: boolean): string[] 
 }
 export function cacheableAssetRefs(c: Content): string[] {
   return [
-    ...new Set(contentAssets(c).filter((ref) => ref && !/^https?:\/\//i.test(ref))),
+    ...new Set(
+      contentAssets(c).filter(
+        (ref) => ref && !/^https?:\/\//i.test(ref) && !ref.startsWith('/demo/'),
+      ),
+    ),
   ];
 }
 export function folderPublishedContents(data: Catalog, folderId: string): Content[] {
@@ -158,4 +140,26 @@ export function folderPublishedContents(data: Catalog, folderId: string): Conten
   return data.contents
     .filter((content) => content.status === 'published' && scope.has(content.folderId))
     .sort(byOrder);
+}
+export function folderHasBrowseableContent(
+  data: Catalog,
+  folderId: string,
+  includeDrafts = false,
+): boolean {
+  const scope = descendants(data.folders, folderId);
+  if (
+    data.contents.some(
+      (content) =>
+        scope.has(content.folderId) && (includeDrafts || content.status === 'published'),
+    )
+  ) {
+    return true;
+  }
+  return (
+    folderId === 'scenes' &&
+    data.scenes.some((scene) => includeDrafts || scene.active)
+  );
+}
+export function publishedContents(data: Catalog): Content[] {
+  return data.contents.filter((content) => content.status === 'published').sort(byOrder);
 }

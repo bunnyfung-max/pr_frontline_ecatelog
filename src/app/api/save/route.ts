@@ -5,6 +5,7 @@ import {
   assertSameOrigin,
   failure,
   json,
+  readJsonBody,
   HttpError,
 } from '@/lib/server';
 import { requireCmsAccess } from '@/lib/cms-access';
@@ -16,7 +17,14 @@ export async function POST(request: Request) {
   try {
     assertSameOrigin(request);
     await requireCmsAccess();
-    const body = await request.json();
+    const body = await readJsonBody<{
+      action?: string;
+      entity?: Entity;
+      id?: string;
+      payload?: unknown;
+      originFolder?: string;
+      expectedVersion?: string;
+    }>(request);
 
     if (body.action === 'delete') {
       const entity = body.entity as Entity;
@@ -35,17 +43,17 @@ export async function POST(request: Request) {
     }
 
     const { entity, payload, originFolder, expectedVersion } = body;
-    if (!Object.hasOwn(schemas, entity)) throw new HttpError(400, '不支援的資料類型。');
-    const parsed = schemas[entity as Entity].safeParse(payload);
+    if (!entity || !Object.hasOwn(schemas, entity)) throw new HttpError(400, '不支援的資料類型。');
+    const parsed = schemas[entity].safeParse(payload);
     if (!parsed.success)
       throw new HttpError(400, parsed.error.issues.map((i) => i.message).join('；'));
     const data = await readCatalog();
     const value = parsed.data;
     if (entity === 'content' && 'folderId' in value) {
-      if (!descendants(data.folders, originFolder).has(value.folderId))
+      if (!originFolder || !descendants(data.folders, originFolder).has(value.folderId))
         throw new HttpError(400, '只可上載至目前或下層資料夾。');
       const current = data.contents.find((c) => c.id === value.id);
-      if (current && !descendants(data.folders, originFolder).has(current.folderId))
+      if (current && originFolder && !descendants(data.folders, originFolder).has(current.folderId))
         throw new HttpError(400, '請先進入內容所屬的目錄。');
       if (value.productIds.some((id) => !data.products.some((p) => p.id === id)))
         throw new HttpError(400, '相關產品不存在。');

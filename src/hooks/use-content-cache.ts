@@ -3,21 +3,21 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { assetUrl } from '@/lib/client';
 import { cacheableAssetRefs } from '@/lib/catalog';
-import { downloadCatalogAssets, getCachedAsset } from '@/lib/content-cache';
+import { syncCatalogCache, type CacheSyncScope } from '@/lib/cache-sync';
+import { getCachedAsset } from '@/lib/content-cache';
 import type { Content } from '@/lib/types';
 
-export type ContentCacheStatus = 'checking' | 'none' | 'partial' | 'ready' | 'downloading' | 'error';
+export type ContentCacheStatus = 'checking' | 'none' | 'partial' | 'ready' | 'downloading';
 
 function collectRefs(contents: Content[]): string[] {
   return [...new Set(contents.flatMap((content) => cacheableAssetRefs(content)))];
 }
 
-function useAssetCacheScope(contents: Content[]) {
+function useAssetCacheScope(contents: Content[], syncScope: CacheSyncScope = 'folder') {
   const refs = useMemo(() => collectRefs(contents), [contents]);
   const scopeKey = useMemo(() => contents.map((content) => content.id).join('\0'), [contents]);
   const [status, setStatus] = useState<ContentCacheStatus>('checking');
-  const [progress, setProgress] = useState({ done: 0, total: 0 });
-  const [error, setError] = useState('');
+  const [progress, setProgress] = useState({ done: 0, total: 0, phase: 'download' as 'remove' | 'download' });
   const [blobUrls, setBlobUrls] = useState<Record<string, string>>({});
   const urlsRef = useRef<string[]>([]);
 
@@ -31,7 +31,7 @@ function useAssetCacheScope(contents: Content[]) {
       revokeUrls();
       setBlobUrls({});
       setStatus('ready');
-      setProgress({ done: 0, total: 0 });
+      setProgress({ done: 0, total: 0, phase: 'download' });
       return;
     }
     setStatus('checking');
@@ -50,7 +50,7 @@ function useAssetCacheScope(contents: Content[]) {
     revokeUrls();
     urlsRef.current = created;
     setBlobUrls(nextUrls);
-    setProgress({ done: cached, total: refs.length });
+    setProgress({ done: cached, total: refs.length, phase: 'download' });
     setStatus(cached === 0 ? 'none' : cached === refs.length ? 'ready' : 'partial');
   }, [refs, revokeUrls]);
 
@@ -66,23 +66,17 @@ function useAssetCacheScope(contents: Content[]) {
 
   const download = useCallback(async () => {
     if (!refs.length || status === 'downloading') return;
-    setError('');
     setStatus('downloading');
-    setProgress({ done: 0, total: refs.length });
-    try {
-      await downloadCatalogAssets(contents, (done, total) => setProgress({ done, total }));
-      await hydrateFromCache();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : '下載緩存失敗。');
-      setStatus('error');
-      await hydrateFromCache();
-    }
-  }, [contents, hydrateFromCache, refs.length, status]);
+    setProgress({ done: 0, total: 0, phase: 'download' });
+    await syncCatalogCache(contents, syncScope, ({ phase, done, total }) => {
+      setProgress({ done, total, phase });
+    });
+    await hydrateFromCache();
+  }, [contents, hydrateFromCache, refs.length, status, syncScope]);
 
   return {
     status,
     progress,
-    error,
     resolveAssetUrl,
     download,
     hasAssets: refs.length > 0,
@@ -90,9 +84,9 @@ function useAssetCacheScope(contents: Content[]) {
 }
 
 export function useContentAssetCache(content: Content) {
-  return useAssetCacheScope([content]);
+  return useAssetCacheScope([content], 'folder');
 }
 
-export function useFolderAssetCache(contents: Content[]) {
-  return useAssetCacheScope(contents);
+export function useFolderAssetCache(contents: Content[], syncScope: CacheSyncScope = 'folder') {
+  return useAssetCacheScope(contents, syncScope);
 }

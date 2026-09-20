@@ -21,7 +21,7 @@ const config: NextConfig = {
               "default-src 'self'",
               "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
               "style-src 'self' 'unsafe-inline'",
-              "img-src 'self' data: blob: https://www.pricerite.com.hk https://*.supabase.co",
+              "img-src 'self' data: blob: https://www.pricerite.com.hk https://*.supabase.co https://*.commercetools.com",
               "media-src 'self' blob:",
               "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
               "frame-ancestors 'none'",

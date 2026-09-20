@@ -1544,6 +1544,7 @@ textarea {
 .viewer {
   position: fixed;
   inset: 0;
+  z-index: 1200;
   border: 0;
   padding: 0;
   margin: 0;
@@ -1554,12 +1555,26 @@ textarea {
   background: #e7e8e1;
   overflow: hidden;
 }
+.page-spread-host {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+.page-spread-host.is-zoomed .paper {
+  flex: 1 1 0;
+  max-width: none;
+  width: auto;
+}
+.page-spread-host.is-zoomed .paper img,
+.page-spread-host.is-zoomed .paper canvas {
+  max-height: none;
+}
 .viewer-top {
   height: 46px;
   min-height: 46px;
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
   padding: 0 10px;
   background: rgba(255, 255, 255, 0.96);
   border-bottom: 1px solid #e4e7df;
@@ -1578,6 +1593,13 @@ textarea {
   min-height: 32px;
   padding: 6px;
 }
+.viewer-back {
+  position: relative;
+  z-index: 2;
+  flex-shrink: 0;
+  cursor: pointer;
+  touch-action: manipulation;
+}
 .viewer-back-label {
   font-size: 12px;
 }
@@ -1590,8 +1612,8 @@ textarea {
 .viewer-title {
   text-align: center;
   min-width: 0;
-  flex: 1;
   padding: 0 4px;
+  pointer-events: none;
 }
 .viewer-title strong {
   display: block;
@@ -1672,6 +1694,10 @@ textarea {
   display: flex;
   align-items: safe center;
   justify-content: safe center;
+}
+.reader-pinch {
+  touch-action: pan-x pan-y;
+  -webkit-overflow-scrolling: touch;
 }
 .page-spread {
   display: flex;
@@ -2027,8 +2053,10 @@ textarea {
   color: #3f4b35;
 }
 .login-art > img {
-  width: 350px;
-  height: 250px;
+  width: 100%;
+  max-width: 450px;
+  height: auto;
+  aspect-ratio: 1170 / 450;
   object-fit: cover;
   object-position: center;
   border-radius: 12px;
@@ -2054,6 +2082,44 @@ textarea {
 .login-card small {
   font-size: 10px;
   color: var(--muted);
+}
+.login-accounts-hint {
+  margin: -6px 0 0;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: #f6f7f2;
+  border: 1px solid var(--line);
+}
+.login-accounts-title {
+  margin: 0 0 10px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.login-accounts-hint ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.login-accounts-hint li {
+  display: grid;
+  gap: 2px;
+  font-size: 12px;
+  color: #4a5642;
+}
+.login-accounts-hint strong {
+  font-size: 11px;
+  color: var(--muted);
+}
+.login-accounts-hint span {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  word-break: break-all;
 }
 .cms-access-shell {
   display: grid;
@@ -2508,9 +2574,6 @@ textarea {
     height: 40px;
     min-height: 40px;
   }
-  .fullscreen-control {
-    display: none;
-  }
   .reader-toolbar .icon-btn {
     min-width: 36px;
     width: 36px;
@@ -2741,15 +2804,6 @@ fieldset:disabled .kit-file-button {
 .landscape .paper:not(:only-child) {
   max-width: min(calc((100cqh - 2px) * 0.818), calc(50% - 8px));
 }
-.page-spread.zoomed {
-  height: auto;
-  min-height: 100%;
-  align-items: flex-start;
-}
-.page-spread.zoomed .paper {
-  flex: 1;
-  max-width: none;
-}
 .reader-page-error {
   display: flex;
   flex-direction: column;
@@ -2770,7 +2824,7 @@ fieldset:disabled .kit-file-button {
   max-height: 100cqh;
   object-fit: contain;
 }
-.page-spread.zoomed .reader-page-error {
+.page-spread-host.is-zoomed .reader-page-error {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -2784,10 +2838,6 @@ fieldset:disabled .kit-file-button {
 .reader-page-error p {
   margin: 0;
   max-width: 28ch;
-}
-.paper img,
-.page-spread.zoomed .paper canvas {
-  max-height: none;
 }
 @media (max-width: 900px) {
   .tool-card h3 {

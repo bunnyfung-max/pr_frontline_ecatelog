@@ -1,10 +1,19 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Search, Folder, ChevronRight, ArrowRight } from 'lucide-react';
 import type { Catalog, Content, Folder as FolderType } from '@/lib/types';
 import { TYPE_LABEL, STATUS_LABEL } from '@/lib/types';
-import { byOrder, trail, folderDeleteBlockers } from '@/lib/catalog';
-import { api } from '@/lib/client';
+import {
+  byOrder,
+  trail,
+  folderDeleteBlockers,
+  parseSearchQuery,
+  SEARCH_CATEGORIES,
+  SEARCH_CATEGORY_LABEL,
+  suggestForCategory,
+} from '@/lib/catalog';
+import { formatCategoryQuery, useCatalogSearch } from '@/hooks/use-catalog-search';
+import type { SearchCategory } from '@/lib/catalog-search';
 import { useFolderDelete } from '@/hooks/use-folder-delete';
 import { Thumb, Empty } from '../ui';
 import { CmsFolderCard } from '../cms-folder-card';
@@ -25,47 +34,42 @@ export function FolderBrowser({
   saved: () => void;
 }) {
   const [q, setQ] = useState('');
-  const [results, setResults] = useState<{ contents: Content[]; folders: FolderType[] } | null>(
-    null,
-  );
-  const [searchError, setSearchError] = useState('');
-  const [searching, setSearching] = useState(false);
+  const [activeCategory, setActiveCategory] = useState<SearchCategory | null>(null);
   const { deleteError, deleteFolder } = useFolderDelete(data, saved);
-  useEffect(() => {
-    setResults(null);
-    setSearchError('');
-    if (!q.trim()) {
-      setSearching(false);
-      return;
-    }
-    setSearching(true);
-    const controller = new AbortController();
-    const timer = setTimeout(() => {
-      api<{ contents: Content[]; folders: FolderType[] }>(
-        `/api/catalog?folder=${encodeURIComponent(folder.id)}&q=${encodeURIComponent(q)}${cms ? '&cms=1' : ''}`,
-        { signal: controller.signal },
-      )
-        .then(setResults)
-        .catch((e) => {
-          if (e.name !== 'AbortError') setSearchError(e.message);
-        })
-        .finally(() => {
-          if (!controller.signal.aborted) setSearching(false);
-        });
-    }, 220);
-    return () => {
-      clearTimeout(timer);
-      controller.abort();
-    };
-  }, [q, folder.id, cms]);
-  const folders = q.trim()
-    ? results?.folders || []
+  const {
+    results,
+    facets,
+    toggleFacetSpace,
+    toggleFacetBrand,
+    toggleFacetEshop,
+    vocabulary,
+    scope,
+    pending,
+    active: searching,
+  } = useCatalogSearch(data, folder.id, q, { includeDrafts: cms, debounceMs: 220 });
+
+  const parsed = useMemo(() => parseSearchQuery(q), [q]);
+  const suggestions = useMemo(() => {
+    const category = activeCategory ?? parsed.category;
+    if (!category) return [];
+    const prefix = parsed.category === category ? parsed.terms.join(' ') : '';
+    return suggestForCategory(vocabulary, category, prefix, 6);
+  }, [activeCategory, parsed, vocabulary]);
+
+  const folders = searching
+    ? results?.folders.map((entry) => entry.item) || []
     : data.folders.filter((f) => f.parentId === folder.id).sort(byOrder);
-  const contents = q.trim()
-    ? results?.contents || []
+  const contents = searching
+    ? results?.contents.map((entry) => entry.item) || []
     : data.contents
         .filter((c) => c.folderId === folder.id && (cms || c.status === 'published'))
         .sort(byOrder);
+  const contentReasons = new Map(
+    results?.contents.map((entry) => [entry.item.id, entry.reasons]) ?? [],
+  );
+  const facetSpaces = results?.availableFacets.spaces.slice(0, 6) ?? [];
+  const facetBrands = results?.availableFacets.brands.slice(0, 6) ?? [];
+
   return (
     <>
       <div className="search-bar">
@@ -83,36 +87,112 @@ export function FolderBrowser({
         )}
         {cms && <span className="scope-tag">{folder.name} 及下層</span>}
       </div>
+      <div className="search-chips cms-search-chips" aria-label="搜尋分類">
+        {SEARCH_CATEGORIES.map((category) => (
+          <button
+            key={category}
+            type="button"
+            className={`search-chip${activeCategory === category || parsed.category === category ? ' search-chip-active' : ''}`}
+            onClick={() => {
+              setActiveCategory(category);
+              setQ(formatCategoryQuery(category, ''));
+            }}
+          >
+            {SEARCH_CATEGORY_LABEL[category]}
+          </button>
+        ))}
+      </div>
+      {suggestions.length > 0 && (activeCategory || parsed.category) && (
+        <ul className="search-suggestions cms-search-suggestions" aria-label="建議搜尋詞">
+          {suggestions.map((term) => {
+            const category = (activeCategory ?? parsed.category)!;
+            return (
+              <li key={`${category}-${term}`}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveCategory(null);
+                    setQ(formatCategoryQuery(category, term));
+                  }}
+                >
+                  <strong>{SEARCH_CATEGORY_LABEL[category]}</strong>
+                  <span>{term}</span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
       <p className="scope-note">
         搜尋範圍：
         {trail(data.folders, folder.id)
           .map((f) => f.name)
           .join(' / ')}
-        　<span>不包含上層或其他目錄</span>
+        　<span>共 {scope.contentCount} 項可搜內容 · 不包含上層或其他目錄</span>
       </p>
-      {searchError && (
-        <p className="error" role="alert">
-          {searchError}
-        </p>
-      )}
       {deleteError && (
         <p className="error" role="alert">
           {deleteError}
         </p>
       )}
-      {searching ? (
+      {searching && (facetSpaces.length > 0 || facetBrands.length > 0) && (
+        <div className="search-facets cms-search-facets" aria-label="篩選條件">
+          {facetSpaces.length > 0 && (
+            <div className="search-facet-group">
+              <span className="search-facet-label">空間</span>
+              <div className="search-facet-chips">
+                {facetSpaces.map((space) => (
+                  <button
+                    key={space}
+                    type="button"
+                    className={`search-facet-chip${facets.spaces.includes(space) ? ' active' : ''}`}
+                    onClick={() => toggleFacetSpace(space)}
+                  >
+                    {space}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          {facetBrands.length > 0 && (
+            <div className="search-facet-group">
+              <span className="search-facet-label">品牌</span>
+              <div className="search-facet-chips">
+                {facetBrands.map((brand) => (
+                  <button
+                    key={brand}
+                    type="button"
+                    className={`search-facet-chip${facets.brands.includes(brand) ? ' active' : ''}`}
+                    onClick={() => toggleFacetBrand(brand)}
+                  >
+                    {brand}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          <button
+            type="button"
+            className={`search-facet-chip search-facet-toggle${facets.hasEshop ? ' active' : ''}`}
+            onClick={toggleFacetEshop}
+          >
+            有 eShop 產品
+          </button>
+        </div>
+      )}
+      {pending ? (
         <div className="loading">搜尋中…</div>
       ) : (
         <>
           {folders.length > 0 && (
             <>
               <div className="list-title">
-                <h2>{q ? '相關資料夾' : '資料夾'}</h2>
+                <h2>{searching ? '相關資料夾' : '資料夾'}</h2>
                 <span>{folders.length} 個</span>
               </div>
               <div className={`folder-grid ${cms ? 'folder-grid-managed' : ''}`}>
                 {folders.map((f, i) => {
-                  const meta = q
+                  const meta = searching
                     ? trail(data.folders, f.id)
                         .slice(0, -1)
                         .map((p) => p.name)
@@ -152,7 +232,7 @@ export function FolderBrowser({
           {contents.length > 0 && (
             <>
               <div className="list-title">
-                <h2>{q ? '搜尋結果' : '展示內容'}</h2>
+                <h2>{searching ? '搜尋結果' : '展示內容'}</h2>
                 <span>{contents.length} 項</span>
               </div>
               {cms ? (
@@ -177,6 +257,14 @@ export function FolderBrowser({
                                 .map((f) => f.name)
                                 .join(' / ')}
                             </small>
+                            {contentReasons.get(c.id)?.length ? (
+                              <small className="search-match-reasons">
+                                {contentReasons
+                                  .get(c.id)!
+                                  .map((reason) => `${reason.label}：${reason.value}`)
+                                  .join(' · ')}
+                              </small>
+                            ) : null}
                           </td>
                           <td>{c.salesKit ? 'Sales Kit' : TYPE_LABEL[c.type]}</td>
                           <td>
@@ -221,6 +309,14 @@ export function FolderBrowser({
                             .map((f) => f.name)
                             .join(' / ')}
                         </small>
+                        {contentReasons.get(c.id)?.length ? (
+                          <small className="search-match-reasons">
+                            {contentReasons
+                              .get(c.id)!
+                              .map((reason) => `${reason.label}：${reason.value}`)
+                              .join(' · ')}
+                          </small>
+                        ) : null}
                         <span>
                           開啟展示
                           <ArrowRight size={16} />
@@ -233,9 +329,9 @@ export function FolderBrowser({
             </>
           )}
           {!folders.length && !contents.length && (
-            <Empty title={q ? '此目錄內找不到相關內容' : undefined}>
-              {q
-                ? '試試其他產品名稱、品牌、顏色或風格。搜尋不會擴大至其他目錄。'
+            <Empty title={searching ? '此目錄內找不到相關內容' : undefined}>
+              {searching
+                ? '試試其他產品名稱、品牌、顏色或風格，或點選上方分類查看建議詞。搜尋不會擴大至其他目錄。'
                 : cms
                   ? '可按「上載內容」新增圖片、PDF、影片或連結。'
                   : undefined}
