@@ -5,7 +5,6 @@ import type { Catalog, Content, Folder as FolderType } from '@/lib/types';
 import { TYPE_LABEL, STATUS_LABEL } from '@/lib/types';
 import {
   byOrder,
-  contentLinkedProductLabels,
   filterSearchMatchReasons,
   trail,
   folderDeleteBlockers,
@@ -17,6 +16,7 @@ import {
 import { formatCategoryQuery, useCatalogSearch } from '@/hooks/use-catalog-search';
 import type { SearchCategory } from '@/lib/catalog-search';
 import { useFolderDelete } from '@/hooks/use-folder-delete';
+import { useEnrichedProductLabels } from '@/hooks/use-enriched-product-labels';
 import { Thumb, Empty } from '../ui';
 import { CmsFolderCard } from '../cms-folder-card';
 
@@ -65,6 +65,7 @@ export function FolderBrowser({
   const contentReasons = new Map(
     results?.contents.map((entry) => [entry.item.id, entry.reasons]) ?? [],
   );
+  const productLabelMap = useEnrichedProductLabels(data, contents);
   const total = searching ? folders.length + contents.length : 0;
   const showSuggestions =
     suggestions.length > 0 &&
@@ -204,7 +205,7 @@ export function FolderBrowser({
                     </thead>
                     <tbody>
                       {contents.map((c) => {
-                        const products = contentLinkedProductLabels(data, c);
+                        const products = productLabelMap.get(c.id) ?? [];
                         const visibleReasons = filterSearchMatchReasons(
                           contentReasons.get(c.id) ?? [],
                           products,
@@ -256,7 +257,7 @@ export function FolderBrowser({
               ) : (
                 <div className="content-grid">
                   {contents.map((c) => {
-                    const products = contentLinkedProductLabels(data, c);
+                    const products = productLabelMap.get(c.id) ?? [];
                     const visibleReasons = filterSearchMatchReasons(
                       contentReasons.get(c.id) ?? [],
                       products,

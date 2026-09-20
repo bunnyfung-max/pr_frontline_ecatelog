@@ -17,17 +17,23 @@ function categoryFromEshopUrl(url: string) {
 }
 
 function cleanProductTitle(title: string) {
-  const parts = title.split(/\s[-–—]\s/);
+  const withoutSite = title.split('|')[0].trim();
+  const parts = withoutSite.split(/\s[-–—]\s/);
   let main = parts[0].trim();
-  const variant = parts[1]?.replace(/\|.*$/, '').trim();
+  const variant = parts[1]?.trim();
 
-  main = main
-    .replace(/\d+W\s*x\s*\d+D(?:\s*x\s*\d+Hmm)?/gi, '')
-    .replace(/\s+/g, ' ')
-    .replace(/\s*-\s*$/, '')
-    .trim();
+  const stripDimensions = (value: string) =>
+    value
+      .replace(/\d+W\s*x\s*[\d./]+D(?:\s*x\s*[\d-]+Hmm)?/gi, '')
+      .replace(/\d+wx\d+D(?:x[\d-]+Hmm)?/gi, '')
+      .replace(/\s+/g, ' ')
+      .replace(/\s*-\s*$/, '')
+      .trim();
 
-  if (variant) return `${main} · ${variant}`;
+  main = stripDimensions(main);
+  const cleanedVariant = variant ? stripDimensions(variant) : '';
+
+  if (cleanedVariant) return `${main} · ${cleanedVariant}`;
   return main;
 }
 

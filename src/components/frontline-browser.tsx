@@ -13,7 +13,6 @@ import type { Catalog, Content, Folder, Scene } from '@/lib/types';
 import { TYPE_LABEL } from '@/lib/types';
 import {
   byOrder,
-  contentLinkedProductLabels,
   filterSearchMatchReasons,
   folderHasBrowseableContent,
   folderLabel,
@@ -24,6 +23,7 @@ import {
   trail,
 } from '@/lib/catalog';
 import { formatCategoryQuery, useCatalogSearch } from '@/hooks/use-catalog-search';
+import { useEnrichedProductLabels } from '@/hooks/use-enriched-product-labels';
 import type { SearchCategory } from '@/lib/catalog-search';
 import { Thumb } from './ui';
 
@@ -111,6 +111,11 @@ export function FrontlineBrowser({
   const contents = data.contents
     .filter((c) => c.folderId === folder?.id && c.status === 'published')
     .sort(byOrder);
+  const visibleContents = useMemo(
+    () => (searching ? results?.contents.map((entry) => entry.item) ?? [] : contents),
+    [searching, results, contents],
+  );
+  const productLabelMap = useEnrichedProductLabels(data, visibleContents);
   const scenes = folder?.id === 'scenes' ? data.scenes.filter((s) => s.active).sort(byOrder) : [];
   const total = results
     ? results.contents.length + results.folders.length + results.scenes.length
@@ -197,7 +202,7 @@ export function FrontlineBrowser({
     return (
       <div className="search-content-list">
         {items.map(({ item: c, reasons }) => {
-          const products = contentLinkedProductLabels(data, c);
+          const products = productLabelMap.get(c.id) ?? [];
           const visibleReasons = filterSearchMatchReasons(reasons, products);
           return (
           <button className="search-content-entry" key={c.id} onClick={() => open(c)}>

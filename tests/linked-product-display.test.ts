@@ -23,31 +23,19 @@ test('formatEshopProductLabel keeps human-readable title and colour variant', ()
   assert.equal(label.includes('1200W'), false);
 });
 
-test('formatEshopProductLabel enriches sparse titles from brand and category', () => {
-  assert.equal(
-    formatEshopProductLabel({
-      url: 'https://www.pricerite.com.hk/hk/zh-hk/products/furniture/sofa/cheers-972783',
-      title: 'CHEERS 梳化',
-      brand: 'CHEERS',
-      sku: '972783',
-      description: '',
-      image: '',
-      fetchedAt: '2026-09-20T00:00:00Z',
-    }),
-    'CHEERS 梳化',
-  );
-  assert.equal(
-    formatEshopProductLabel({
-      url: 'https://www.pricerite.com.hk/hk/zh-hk/products/furniture/study-desk/261518',
-      title: '書枱',
-      brand: 'Pricerite',
-      sku: '261518',
-      description: '',
-      image: '',
-      fetchedAt: '2026-09-20T00:00:00Z',
-    }),
-    '書枱',
-  );
+test('formatEshopProductLabel keeps model name for experience demo sofas', () => {
+  const label = formatEshopProductLabel({
+    url: 'https://www.pricerite.com.hk/hk/zh-hk/products/furniture/sofa/fergal-975663',
+    title: 'FERGAL MENA T330 三座位功能性儲物真皮梳化 1905W x 813D x 1003Hmm',
+    brand: 'FERGAL',
+    sku: '975663',
+    description: '',
+    image: '',
+    fetchedAt: '2026-09-20T00:00:00Z',
+  });
+  assert.match(label, /MENA T330/);
+  assert.match(label, /真皮梳化/);
+  assert.equal(label.includes('1905W'), false);
 });
 
 test('formatLegacyProductLabel prefers name with colour or style', () => {
