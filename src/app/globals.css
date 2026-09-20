@@ -2873,6 +2873,102 @@ fieldset:disabled .kit-file-button {
     font-size: 12px;
   }
 }
+.feedback-fab {
+  position: fixed;
+  right: 20px;
+  bottom: max(20px, env(safe-area-inset-bottom, 0px));
+  z-index: 1210;
+  width: 56px;
+  height: 56px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--pr-green);
+  color: #fff;
+  box-shadow: 0 10px 28px rgba(28, 52, 34, 0.28);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.feedback-fab:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 32px rgba(28, 52, 34, 0.32);
+}
+.feedback-fab:focus-visible {
+  outline: 2px solid var(--pr-orange);
+  outline-offset: 3px;
+}
+.feedback-form .feedback-intro {
+  margin: 0 0 6px;
+  color: #5f6658;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.feedback-attachments-block {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.feedback-attachments-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.feedback-paste-zone {
+  border: 1px dashed #c8cec0;
+  border-radius: 8px;
+  background: #f8faf5;
+  color: #6d7466;
+  font-size: 12px;
+  line-height: 1.5;
+  padding: 14px;
+  text-align: center;
+}
+.feedback-attachments {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 10px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.feedback-attachment {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #dce1d5;
+  background: #fff;
+}
+.feedback-attachment img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.feedback-attachment-status,
+.feedback-attachment-error {
+  position: absolute;
+  inset: auto 0 0;
+  padding: 4px 6px;
+  font-size: 10px;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.62);
+}
+.feedback-attachment-error {
+  background: rgba(176, 48, 48, 0.88);
+}
+.feedback-attachment-remove {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: rgba(255, 255, 255, 0.92);
+}
 @media (prefers-reduced-motion: reduce) {
   * {
     scroll-behavior: auto !important;

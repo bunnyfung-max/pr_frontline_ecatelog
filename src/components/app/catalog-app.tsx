@@ -40,6 +40,8 @@ import { Login } from './login';
 import { HomePage } from './home-page';
 import { FolderBrowser } from './folder-browser';
 import { FolderForm } from './folder-form';
+import { FeedbackForm } from './feedback-form';
+import { FeedbackFloatingButton } from './feedback-floating-button';
 
 export function CatalogApp() {
   const router = useRouter();
@@ -69,6 +71,7 @@ export function CatalogApp() {
   const [edit, setEdit] = useState<Content | 'new' | null>(null);
   const [manage, setManage] = useState<ManageKind | ''>('');
   const [newFolder, setNewFolder] = useState(false);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [toast, setToast] = useState('');
   const cms = cmsMode && hasCmsAccess;
   const error = catalogError || sessionError;
@@ -417,6 +420,21 @@ export function CatalogApp() {
       )}
       {newFolder && (
         <FolderForm parentId={folderId} close={() => setNewFolder(false)} saved={saved} />
+      )}
+      {!feedbackOpen && (
+        <FeedbackFloatingButton onClick={() => setFeedbackOpen(true)} />
+      )}
+      {feedbackOpen && (
+        <FeedbackForm
+          close={() => setFeedbackOpen(false)}
+          saved={() => setToast('感謝你的回饋，我們已收到。')}
+          pageContext={JSON.stringify({
+            folder: folderId || null,
+            content: activeContentId,
+            cms: cmsMode,
+            q: searchQuery || null,
+          })}
+        />
       )}
       {toast && (
         <div className="toast" role="status">
