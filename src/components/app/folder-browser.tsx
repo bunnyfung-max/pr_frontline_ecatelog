@@ -39,10 +39,6 @@ export function FolderBrowser({
   const { deleteError, deleteFolder } = useFolderDelete(data, saved);
   const {
     results,
-    facets,
-    toggleFacetSpace,
-    toggleFacetBrand,
-    toggleFacetEshop,
     vocabulary,
     scope,
     pending,
@@ -68,9 +64,6 @@ export function FolderBrowser({
   const contentReasons = new Map(
     results?.contents.map((entry) => [entry.item.id, entry.reasons]) ?? [],
   );
-  const facetSpaces = results?.availableFacets.spaces.slice(0, 6) ?? [];
-  const facetBrands = results?.availableFacets.brands.slice(0, 6) ?? [];
-
   return (
     <>
       <div className="search-bar">
@@ -135,51 +128,6 @@ export function FolderBrowser({
         <p className="error" role="alert">
           {deleteError}
         </p>
-      )}
-      {searching && (facetSpaces.length > 0 || facetBrands.length > 0) && (
-        <div className="search-facets cms-search-facets" aria-label="篩選條件">
-          {facetSpaces.length > 0 && (
-            <div className="search-facet-group">
-              <span className="search-facet-label">空間</span>
-              <div className="search-facet-chips">
-                {facetSpaces.map((space) => (
-                  <button
-                    key={space}
-                    type="button"
-                    className={`search-facet-chip${facets.spaces.includes(space) ? ' active' : ''}`}
-                    onClick={() => toggleFacetSpace(space)}
-                  >
-                    {space}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-          {facetBrands.length > 0 && (
-            <div className="search-facet-group">
-              <span className="search-facet-label">品牌</span>
-              <div className="search-facet-chips">
-                {facetBrands.map((brand) => (
-                  <button
-                    key={brand}
-                    type="button"
-                    className={`search-facet-chip${facets.brands.includes(brand) ? ' active' : ''}`}
-                    onClick={() => toggleFacetBrand(brand)}
-                  >
-                    {brand}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-          <button
-            type="button"
-            className={`search-facet-chip search-facet-toggle${facets.hasEshop ? ' active' : ''}`}
-            onClick={toggleFacetEshop}
-          >
-            有 eShop 產品
-          </button>
-        </div>
       )}
       {pending ? (
         <div className="loading">搜尋中…</div>

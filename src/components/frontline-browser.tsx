@@ -51,11 +51,6 @@ export function FrontlineBrowser({
 
   const {
     results,
-    facets,
-    resetFacets,
-    toggleFacetSpace,
-    toggleFacetBrand,
-    toggleFacetEshop,
     vocabulary,
     scope,
     active: searching,
@@ -75,10 +70,6 @@ export function FrontlineBrowser({
     }, 280);
     return () => clearTimeout(timer);
   }, [input, onSearch, query]);
-  useEffect(() => {
-    if (!searchText.trim()) resetFacets();
-  }, [searchText, resetFacets]);
-
   const parsed = useMemo(() => parseSearchQuery(input), [input]);
   const suggestions = useMemo(() => {
     const category = activeCategory ?? parsed.category;
@@ -239,9 +230,6 @@ export function FrontlineBrowser({
 
   const folderResults = results?.folders.map((entry) => entry.item) ?? [];
   const sceneResults = results?.scenes.map((entry) => entry.item) ?? [];
-  const facetSpaces = results?.availableFacets.spaces.slice(0, 8) ?? [];
-  const facetBrands = results?.availableFacets.brands.slice(0, 8) ?? [];
-
   return (
     <section
       className={`frontline-browser ${home ? 'search-home' : 'search-folder'}`}
@@ -293,7 +281,6 @@ export function FrontlineBrowser({
                 onClick={() => {
                   setInput('');
                   setActiveCategory(null);
-                  resetFacets();
                   onSearch('');
                   inputRef.current?.focus();
                 }}
@@ -360,64 +347,16 @@ export function FrontlineBrowser({
               onClick={() => {
                 setInput('');
                 setActiveCategory(null);
-                resetFacets();
                 onSearch('');
               }}
             >
               返回目錄
             </button>
           </div>
-          {(facetSpaces.length > 0 || facetBrands.length > 0) && (
-            <div className="search-facets" aria-label="篩選條件">
-              {facetSpaces.length > 0 && (
-                <div className="search-facet-group">
-                  <span className="search-facet-label">空間</span>
-                  <div className="search-facet-chips">
-                    {facetSpaces.map((space) => (
-                      <button
-                        key={space}
-                        type="button"
-                        className={`search-facet-chip${facets.spaces.includes(space) ? ' active' : ''}`}
-                        onClick={() => toggleFacetSpace(space)}
-                      >
-                        {space}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {facetBrands.length > 0 && (
-                <div className="search-facet-group">
-                  <span className="search-facet-label">品牌</span>
-                  <div className="search-facet-chips">
-                    {facetBrands.map((brand) => (
-                      <button
-                        key={brand}
-                        type="button"
-                        className={`search-facet-chip${facets.brands.includes(brand) ? ' active' : ''}`}
-                        onClick={() => toggleFacetBrand(brand)}
-                      >
-                        {brand}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-              <button
-                type="button"
-                className={`search-facet-chip search-facet-toggle${facets.hasEshop ? ' active' : ''}`}
-                onClick={toggleFacetEshop}
-              >
-                有 eShop 產品
-              </button>
-            </div>
-          )}
           <p className="result-summary" role="status">
             {pendingSearch
               ? '搜尋中…'
-              : searchText.trim()
-                ? `「${searchText}」找到 ${total} 項結果`
-                : `已篩選 ${total} 項結果`}
+              : `「${searchText}」找到 ${total} 項結果`}
           </p>
           {!pendingSearch &&
             (total ? (

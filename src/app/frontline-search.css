@@ -257,47 +257,6 @@
   color: var(--ink);
 }
 
-.search-facets {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin: 0 0 14px;
-  padding: 14px;
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  background: #fafbfc;
-}
-.search-facet-group {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-}
-.search-facet-label {
-  flex: 0 0 40px;
-  font-size: 12px;
-  color: var(--muted);
-}
-.search-facet-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-.search-facet-chip {
-  padding: 6px 12px;
-  border-radius: 999px;
-  border: 1px solid var(--line);
-  background: #fff;
-  font-size: 12px;
-  color: var(--ink);
-}
-.search-facet-chip.active,
-.search-facet-toggle.active {
-  border-color: rgba(0, 104, 71, 0.28);
-  background: var(--pr-green-soft);
-  color: var(--pr-green-hover);
-}
-
 .search-content-products {
   margin: 4px 0 0;
   font-size: 12px;
@@ -324,9 +283,6 @@
 }
 .cms-search-suggestions {
   margin-top: 10px;
-}
-.cms-search-facets {
-  margin-top: 12px;
 }
 
 .frontline button:focus-visible,

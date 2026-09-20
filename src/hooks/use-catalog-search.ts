@@ -1,16 +1,13 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { Catalog } from '@/lib/types';
 import {
-  EMPTY_SEARCH_FACETS,
   buildSearchVocabulary,
-  hasActiveFacets,
   searchCatalogEnhanced,
   searchScopeSummary,
   type EnhancedSearchResults,
   type SearchCategory,
-  type SearchFacets,
   type SearchVocabulary,
 } from '@/lib/catalog-search';
 
@@ -22,7 +19,6 @@ export function useCatalogSearch(
 ) {
   const includeDrafts = options.includeDrafts ?? false;
   const debounceMs = options.debounceMs ?? 280;
-  const [facets, setFacets] = useState<SearchFacets>(EMPTY_SEARCH_FACETS);
   const [debouncedQuery, setDebouncedQuery] = useState(query);
 
   useEffect(() => setDebouncedQuery(query), [query]);
@@ -40,44 +36,14 @@ export function useCatalogSearch(
     () => searchScopeSummary(data, folderId, includeDrafts),
     [data, folderId, includeDrafts],
   );
-  const active = !!debouncedQuery.trim() || hasActiveFacets(facets);
+  const active = !!debouncedQuery.trim();
   const results: EnhancedSearchResults | null = useMemo(() => {
     if (!active) return null;
-    return searchCatalogEnhanced(data, folderId, debouncedQuery, { includeDrafts, facets });
-  }, [active, data, debouncedQuery, facets, folderId, includeDrafts]);
-
-  const resetFacets = useCallback(() => setFacets(EMPTY_SEARCH_FACETS), []);
-
-  const toggleFacetSpace = useCallback((space: string) => {
-    setFacets((current) => ({
-      ...current,
-      spaces: current.spaces.includes(space)
-        ? current.spaces.filter((item) => item !== space)
-        : [...current.spaces, space],
-    }));
-  }, []);
-
-  const toggleFacetBrand = useCallback((brand: string) => {
-    setFacets((current) => ({
-      ...current,
-      brands: current.brands.includes(brand)
-        ? current.brands.filter((item) => item !== brand)
-        : [...current.brands, brand],
-    }));
-  }, []);
-
-  const toggleFacetEshop = useCallback(() => {
-    setFacets((current) => ({ ...current, hasEshop: !current.hasEshop }));
-  }, []);
+    return searchCatalogEnhanced(data, folderId, debouncedQuery, { includeDrafts });
+  }, [active, data, debouncedQuery, folderId, includeDrafts]);
 
   return {
     results,
-    facets,
-    setFacets,
-    resetFacets,
-    toggleFacetSpace,
-    toggleFacetBrand,
-    toggleFacetEshop,
     vocabulary,
     scope,
     pending: query !== debouncedQuery,
