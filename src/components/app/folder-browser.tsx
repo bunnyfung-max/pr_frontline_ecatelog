@@ -6,6 +6,7 @@ import { TYPE_LABEL, STATUS_LABEL } from '@/lib/types';
 import {
   byOrder,
   contentLinkedProductLabels,
+  filterSearchMatchReasons,
   trail,
   folderDeleteBlockers,
   parseSearchQuery,
@@ -204,6 +205,10 @@ export function FolderBrowser({
                     <tbody>
                       {contents.map((c) => {
                         const products = contentLinkedProductLabels(data, c);
+                        const visibleReasons = filterSearchMatchReasons(
+                          contentReasons.get(c.id) ?? [],
+                          products,
+                        );
                         return (
                         <tr key={c.id}>
                           <td>
@@ -218,10 +223,9 @@ export function FolderBrowser({
                                 包含產品：{products.join(' · ')}
                               </small>
                             )}
-                            {contentReasons.get(c.id)?.length ? (
+                            {visibleReasons.length ? (
                               <small className="search-match-reasons">
-                                {contentReasons
-                                  .get(c.id)!
+                                {visibleReasons
                                   .map((reason) => `${reason.label}：${reason.value}`)
                                   .join(' · ')}
                               </small>
@@ -253,6 +257,10 @@ export function FolderBrowser({
                 <div className="content-grid">
                   {contents.map((c) => {
                     const products = contentLinkedProductLabels(data, c);
+                    const visibleReasons = filterSearchMatchReasons(
+                      contentReasons.get(c.id) ?? [],
+                      products,
+                    );
                     return (
                     <button
                       key={c.id}
@@ -278,10 +286,9 @@ export function FolderBrowser({
                             包含產品：{products.join(' · ')}
                           </small>
                         )}
-                        {contentReasons.get(c.id)?.length ? (
+                        {visibleReasons.length ? (
                           <small className="search-match-reasons">
-                            {contentReasons
-                              .get(c.id)!
+                            {visibleReasons
                               .map((reason) => `${reason.label}：${reason.value}`)
                               .join(' · ')}
                           </small>

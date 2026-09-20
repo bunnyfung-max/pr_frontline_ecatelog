@@ -166,7 +166,7 @@ function EshopProductCards({
             </div>
             <div className="related-product-copy">
               <h3>{product.title}</h3>
-              <small>{[product.brand, product.sku].filter(Boolean).join(' · ')}</small>
+              <small>{product.brand}</small>
               <div className="eshop-product-price-row">
                 {loading ? (
                   <span className="eshop-product-price muted">讀取價格中…</span>

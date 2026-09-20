@@ -14,6 +14,7 @@ import { TYPE_LABEL } from '@/lib/types';
 import {
   byOrder,
   contentLinkedProductLabels,
+  filterSearchMatchReasons,
   folderHasBrowseableContent,
   folderLabel,
   parseSearchQuery,
@@ -197,6 +198,7 @@ export function FrontlineBrowser({
       <div className="search-content-list">
         {items.map(({ item: c, reasons }) => {
           const products = contentLinkedProductLabels(data, c);
+          const visibleReasons = filterSearchMatchReasons(reasons, products);
           return (
           <button className="search-content-entry" key={c.id} onClick={() => open(c)}>
             <div className="search-thumbnail">
@@ -208,14 +210,18 @@ export function FrontlineBrowser({
               </small>
               <h3>{c.name}</h3>
               {products.length > 0 && (
-                <p className="search-content-products">
+                <div className="search-content-products">
                   <span className="search-content-products-label">包含產品</span>
-                  {products.join(' · ')}
-                </p>
+                  <ul className="search-content-product-list">
+                    {products.map((product) => (
+                      <li key={product}>{product}</li>
+                    ))}
+                  </ul>
+                </div>
               )}
-              {reasons.length > 0 && (
+              {visibleReasons.length > 0 && (
                 <p className="search-match-reasons">
-                  {reasons.map((reason) => `${reason.label}：${reason.value}`).join(' · ')}
+                  {visibleReasons.map((reason) => `${reason.label}：${reason.value}`).join(' · ')}
                 </p>
               )}
               <span>開啟展示</span>

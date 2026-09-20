@@ -258,17 +258,30 @@
 }
 
 .search-content-products {
-  margin: 4px 0 0;
-  font-size: 12px;
-  line-height: 1.45;
-  color: var(--ink);
+  margin: 6px 0 0;
 }
 .search-content-products-label {
-  display: inline-block;
-  margin-right: 6px;
+  display: block;
+  margin-bottom: 4px;
   font-size: 11px;
   font-weight: 600;
   color: var(--pr-green-hover);
+}
+.search-content-product-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.search-content-product-list li {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #f1f3f4;
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--ink);
 }
 .search-match-reasons {
   margin: 4px 0 0;
