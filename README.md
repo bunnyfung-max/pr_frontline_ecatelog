@@ -30,7 +30,7 @@ pnpm dev:demo
 3. 開啟 Sale Kit：橫向兩頁、直向一頁，旋轉保留目前頁碼；右側開關購物功能列。
 4. 右上「內容管理」→ 逐層进入目錄 → 上載內容。目的地只包括目前及下層目錄。
 5. CMS「產品索引」可為每件產品設定自在購及 eShop 連結；每份展示內容 / Sales Kit 的編輯頁亦可設定專屬購物連結及相關產品。「組合優惠」獨立管理 Bundle Offer，不再設定共用自在購網址。
-6. New Housing Sales Kit 按「平面圖 → 效果圖 → 產品列表（一）→ 產品列表（二）→ 選填補充圖」上載；之後可加圖片、PDF 及影片並排序。未齊頭四張可存草稿，發布需齊全。前端依此順序展示，詳見 [上載規格](docs/sales-kit-upload.md)。
+6. New Housing Sales Kit 按「平面圖 → 效果圖 → 產品列表（一）→ 產品列表（二）→ 選填補充圖」上載；之後可加圖片、PDF 及影片並排序。未齊頭四張可存草稿，發布需齊全。前端依此順序展示。
 
 ## 已實作功能
 
@@ -62,7 +62,7 @@ Weekly Summary 不包含，Weekly Eposter 保留。六個場景名称已建立�
 5. 將 `.env.example` 複製為 `.env.local`，填寫該 project URL 及 **publishable key**，執行 `pnpm dev`。**不需要 service-role key，也不要加入。**
 6. 以 admin 登入，確認資料夾及六個場景，加入正式素材及正確 URL；另建 frontline 帳戶進行權限驗收。
 
-正式／Preview 部署前的安全清單見 [docs/DEPLOYMENT-SECURITY.md](docs/DEPLOYMENT-SECURITY.md)。
+業務需求、User Flow 及安全要求見 [docs/IT-REQUIREMENTS.md](docs/IT-REQUIREMENTS.md)。
 
 Storage `catalog` bucket 為 private，每檔上限 50 MB。雲端素材直接上載到 Supabase，不經 Vercel request body；格式白名單及大小在伺服器與 bucket 同時限制。SVG、HTML 不接受上載。少量 repo-native `/demo/*.svg` 僅用於示意。
 
@@ -76,7 +76,7 @@ Storage `catalog` bucket 為 private，每檔上限 50 MB。雲端素材直接�
 4. 先設定 Preview environment 的兩個 `NEXT_PUBLIC_SUPABASE_*` 變數。**不要設定 DEMO_MODE=true**；hosted build 不允許本機 demo。
 5. 將 Supabase Auth 的 Site URL / approved redirect URLs 設定為項目的實際 URL。不要使用跨項目通配 redirect。
 6. 首次 import 可能建立 Vercel production deployment；正式發佈前請先配置 Vercel Deployment Protection，並保留網站登入保護。優先在 feature branch 建立 Preview，確認後才指向正式域名。
-7. 按 `docs/ACCEPTANCE.md` 以兩種角色及真實平板驗收後，再批准 Production。
+7. 按 [docs/IT-REQUIREMENTS.md](docs/IT-REQUIREMENTS.md) 以兩種角色及真實平板驗收後，再批准 Production。
 
 目前沒有建立雲端項目、產生收費、推送 production 或放入正式公司素材。
 
