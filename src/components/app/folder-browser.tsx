@@ -64,6 +64,11 @@ export function FolderBrowser({
   const contentReasons = new Map(
     results?.contents.map((entry) => [entry.item.id, entry.reasons]) ?? [],
   );
+  const total = searching ? folders.length + contents.length : 0;
+  const showSuggestions =
+    suggestions.length > 0 &&
+    (activeCategory || parsed.category) &&
+    !(searching && !pending && total > 0);
   return (
     <>
       <div className="search-bar">
@@ -96,7 +101,7 @@ export function FolderBrowser({
           </button>
         ))}
       </div>
-      {suggestions.length > 0 && (activeCategory || parsed.category) && (
+      {showSuggestions && (
         <ul className="search-suggestions cms-search-suggestions" aria-label="建議搜尋詞">
           {suggestions.map((term) => {
             const category = (activeCategory ?? parsed.category)!;

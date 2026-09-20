@@ -230,6 +230,10 @@ export function FrontlineBrowser({
 
   const folderResults = results?.folders.map((entry) => entry.item) ?? [];
   const sceneResults = results?.scenes.map((entry) => entry.item) ?? [];
+  const showSuggestions =
+    suggestions.length > 0 &&
+    (activeCategory || parsed.category) &&
+    !(searching && !pendingSearch && total > 0);
   return (
     <section
       className={`frontline-browser ${home ? 'search-home' : 'search-folder'}`}
@@ -311,7 +315,7 @@ export function FrontlineBrowser({
               ))}
             </div>
           )}
-          {suggestions.length > 0 && (activeCategory || parsed.category) && (
+          {showSuggestions && (
             <ul className="search-suggestions" aria-label="建議搜尋詞">
               {suggestions.map((term) => {
                 const category = (activeCategory ?? parsed.category)!;
