@@ -11,8 +11,22 @@ import {
 } from '@/lib/server';
 import { feedbackSubmitSchema } from '@/lib/feedback';
 import { ensurePendingMigrations } from '@/lib/pending-migrations';
-import { saveFeedbackSubmission } from '@/lib/feedback-repository';
+import { listFeedbackSubmissions, saveFeedbackSubmission } from '@/lib/feedback-repository';
 import { rateLimit, clientKey } from '@/lib/rate-limit';
+
+export async function GET() {
+  try {
+    await requireSession(true);
+    if (!demoEnabled()) await ensurePendingMigrations();
+    if (demoEnabled()) {
+      return json({ items: await listFeedbackSubmissions() });
+    }
+    const sb = await supabase();
+    return json({ items: await listFeedbackSubmissions(sb) });
+  } catch (e) {
+    return failure(e);
+  }
+}
 
 export async function POST(request: Request) {
   try {

@@ -16,6 +16,7 @@ import {
   CheckCircle2,
   LockKeyhole,
   RefreshCw,
+  MessageSquare,
 } from 'lucide-react';
 import type { Content, ManageKind, Folder as FolderType } from '@/lib/types';
 import {
@@ -33,6 +34,7 @@ import { FolderCacheButton } from '../folder-cache-button';
 import { Thumb, Empty, Breadcrumb, External, Modal } from '../ui';
 import { Viewer } from '../viewer';
 import { ContentEditor, ManagePanel } from '../cms';
+import { FeedbackAdmin } from '../cms/feedback-admin';
 import { SimpleDirectory } from '../simple-directory';
 import { FrontlineBrowser } from '../frontline-browser';
 import { rootIcons } from './constants';
@@ -51,6 +53,7 @@ export function CatalogApp() {
   const contentParam = params.get('content');
   const [activeContentId, setActiveContentId] = useState<string | null>(contentParam);
   const searchQuery = params.get('q') || '';
+  const feedbackView = params.get('feedback') === '1';
   const {
     session,
     setSession,
@@ -94,6 +97,12 @@ export function CatalogApp() {
     },
     [router, cmsMode, folderId, searchQuery],
   );
+  const openFeedbackAdmin = () => {
+    const p = new URLSearchParams();
+    p.set('cms', '1');
+    p.set('feedback', '1');
+    router.push(`/?${p.toString()}`, { scroll: true });
+  };
   const search = (query: string) => {
     const p = new URLSearchParams(params.toString());
     p.delete('content');
@@ -219,7 +228,7 @@ export function CatalogApp() {
           <aside className="sidebar">
             <p className="overline">{cms ? 'CONTENT WORKSPACE' : 'SELLING TOOLKIT'}</p>
             <button
-              className={!folderId ? 'nav-item active' : 'nav-item'}
+              className={!folderId && !feedbackView ? 'nav-item active' : 'nav-item'}
               onClick={() => navigate('')}
             >
               <Home size={19} />
@@ -228,7 +237,8 @@ export function CatalogApp() {
             <div className="nav-divider" />
             {(data ? rootFolders(data) : []).map((f, i) => {
               const Icon = rootIcons[i % rootIcons.length] || Folder;
-              const active = folderId && data && trail(data.folders, folderId)[0]?.id === f.id;
+              const active =
+                !feedbackView && folderId && data && trail(data.folders, folderId)[0]?.id === f.id;
               return (
                 <button
                   key={f.id}
@@ -240,6 +250,18 @@ export function CatalogApp() {
                 </button>
               );
             })}
+            {session.role === 'admin' && (
+              <div className="sidebar-footer">
+                <button
+                  type="button"
+                  className={`nav-item ${feedbackView ? 'active' : ''}`}
+                  onClick={openFeedbackAdmin}
+                >
+                  <MessageSquare size={19} />
+                  試用回饋
+                </button>
+              </div>
+            )}
           </aside>
         )}
         <main className="main">
@@ -256,10 +278,12 @@ export function CatalogApp() {
             <div className="loading">正在載入目錄…</div>
           ) : (
             <>
-              {(folderId || cms) && (
+              {(folderId || cms) && !feedbackView && (
                 <Breadcrumb folders={data.folders} id={folderId} navigate={navigate} />
               )}
-              {!cms && (!folderId || folder) ? (
+              {feedbackView ? (
+                <FeedbackAdmin />
+              ) : !cms && (!folderId || folder) ? (
                 <>
                   {folder && (
                     <div className="frontline-folder-heading">

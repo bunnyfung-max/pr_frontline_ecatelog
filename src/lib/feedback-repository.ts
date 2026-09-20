@@ -25,6 +25,34 @@ async function writeLocalSubmissions(rows: FeedbackSubmission[]) {
   await rename(temp, submissionsFile());
 }
 
+export async function listFeedbackSubmissions(
+  supabase?: SupabaseClient,
+): Promise<FeedbackSubmission[]> {
+  if (!supabase) return readLocalSubmissions();
+  const { data, error } = await supabase
+    .from('feedback_submissions')
+    .select(
+      'id,reporter_name,reporter_email,category,description,priority,page_context,attachments,created_at',
+    )
+    .order('created_at', { ascending: false });
+  if (error) {
+    if (error.code === '42P01')
+      throw new HttpError(503, '意見回饋功能尚未完成資料庫設定，請聯絡 IT。');
+    throw new HttpError(500, '無法載入回饋列表。');
+  }
+  return (data || []).map((row) => ({
+    id: row.id,
+    name: row.reporter_name,
+    email: row.reporter_email || '',
+    category: row.category,
+    description: row.description,
+    priority: row.priority,
+    pageContext: row.page_context || undefined,
+    attachments: Array.isArray(row.attachments) ? row.attachments : [],
+    createdAt: row.created_at,
+  }));
+}
+
 export async function saveFeedbackSubmission(
   submission: FeedbackSubmission,
   supabase?: SupabaseClient,
@@ -41,6 +69,7 @@ export async function saveFeedbackSubmission(
     id: submission.id,
     user_id: userId,
     reporter_name: submission.name,
+    reporter_email: submission.email,
     category: submission.category,
     description: submission.description,
     priority: submission.priority,

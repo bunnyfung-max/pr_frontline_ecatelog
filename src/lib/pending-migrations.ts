@@ -7,6 +7,7 @@ import { createPostgres, reloadPostgrestSchema } from './postgres';
 const migrationFiles = [
   '006_app_migrations.sql',
   '005_feedback.sql',
+  '007_feedback_reporter_email.sql',
 ] as const;
 
 let ensurePromise: Promise<string[]> | null = null;

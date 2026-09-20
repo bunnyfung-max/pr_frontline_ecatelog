@@ -8,7 +8,7 @@ export type FeedbackPriority = (typeof FEEDBACK_PRIORITIES)[number];
 
 export const FEEDBACK_CATEGORY_LABELS: Record<FeedbackCategory, string> = {
   bug: '我發現問題',
-  optimization: '我想要',
+  optimization: '我想優化',
 };
 
 export const FEEDBACK_PRIORITY_LABELS: Record<FeedbackPriority, string> = {
