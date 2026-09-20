@@ -8,15 +8,17 @@ import { HttpError } from './http-error';
 export { dataDirectory, HttpError };
 export const demoEnabled = () =>
   process.env.NODE_ENV === 'development' && process.env.DEMO_MODE === 'true' && !process.env.VERCEL;
-export const configured = () =>
-  Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY);
+export const supabaseUrl = () => process.env.NEXT_PUBLIC_SUPABASE_URL;
+export const supabasePublishableKey = () =>
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+export const configured = () => Boolean(supabaseUrl() && supabasePublishableKey());
 
 export async function supabase() {
   if (!configured()) throw new HttpError(503, '尚未設定 Supabase，請參閱部署指南。');
   const jar = await cookies();
   return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+    supabaseUrl()!,
+    supabasePublishableKey()!,
     {
       cookies: {
         getAll: () => jar.getAll(),
