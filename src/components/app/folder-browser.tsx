@@ -5,6 +5,7 @@ import type { Catalog, Content, Folder as FolderType } from '@/lib/types';
 import { TYPE_LABEL, STATUS_LABEL } from '@/lib/types';
 import {
   byOrder,
+  contentLinkedProductLabels,
   trail,
   folderDeleteBlockers,
   parseSearchQuery,
@@ -248,7 +249,9 @@ export function FolderBrowser({
                       </tr>
                     </thead>
                     <tbody>
-                      {contents.map((c) => (
+                      {contents.map((c) => {
+                        const products = contentLinkedProductLabels(data, c);
+                        return (
                         <tr key={c.id}>
                           <td>
                             <strong>{c.name}</strong>
@@ -257,6 +260,11 @@ export function FolderBrowser({
                                 .map((f) => f.name)
                                 .join(' / ')}
                             </small>
+                            {products.length > 0 && (
+                              <small className="search-content-products">
+                                包含產品：{products.join(' · ')}
+                              </small>
+                            )}
                             {contentReasons.get(c.id)?.length ? (
                               <small className="search-match-reasons">
                                 {contentReasons
@@ -283,13 +291,16 @@ export function FolderBrowser({
                             </button>
                           </td>
                         </tr>
-                      ))}
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
               ) : (
                 <div className="content-grid">
-                  {contents.map((c) => (
+                  {contents.map((c) => {
+                    const products = contentLinkedProductLabels(data, c);
+                    return (
                     <button
                       key={c.id}
                       className="content-card"
@@ -309,6 +320,11 @@ export function FolderBrowser({
                             .map((f) => f.name)
                             .join(' / ')}
                         </small>
+                        {products.length > 0 && (
+                          <small className="search-content-products">
+                            包含產品：{products.join(' · ')}
+                          </small>
+                        )}
                         {contentReasons.get(c.id)?.length ? (
                           <small className="search-match-reasons">
                             {contentReasons
@@ -323,7 +339,8 @@ export function FolderBrowser({
                         </span>
                       </div>
                     </button>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </>

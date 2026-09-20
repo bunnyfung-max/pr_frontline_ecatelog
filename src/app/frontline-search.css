@@ -298,6 +298,19 @@
   color: var(--pr-green-hover);
 }
 
+.search-content-products {
+  margin: 4px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--ink);
+}
+.search-content-products-label {
+  display: inline-block;
+  margin-right: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--pr-green-hover);
+}
 .search-match-reasons {
   margin: 4px 0 0;
   font-size: 12px;

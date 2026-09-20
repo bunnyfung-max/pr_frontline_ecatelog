@@ -13,6 +13,7 @@ import type { Catalog, Content, Folder, Scene } from '@/lib/types';
 import { TYPE_LABEL } from '@/lib/types';
 import {
   byOrder,
+  contentLinkedProductLabels,
   folderHasBrowseableContent,
   folderLabel,
   parseSearchQuery,
@@ -203,7 +204,9 @@ export function FrontlineBrowser({
     if (!items.length) return null;
     return (
       <div className="search-content-list">
-        {items.map(({ item: c, reasons }) => (
+        {items.map(({ item: c, reasons }) => {
+          const products = contentLinkedProductLabels(data, c);
+          return (
           <button className="search-content-entry" key={c.id} onClick={() => open(c)}>
             <div className="search-thumbnail">
               <Thumb src={c.cover || (c.type === 'image' ? c.files[0] : '')} />
@@ -213,6 +216,12 @@ export function FrontlineBrowser({
                 {c.salesKit ? 'Sales Kit' : TYPE_LABEL[c.type]} · {path(c.folderId)}
               </small>
               <h3>{c.name}</h3>
+              {products.length > 0 && (
+                <p className="search-content-products">
+                  <span className="search-content-products-label">包含產品</span>
+                  {products.join(' · ')}
+                </p>
+              )}
               {reasons.length > 0 && (
                 <p className="search-match-reasons">
                   {reasons.map((reason) => `${reason.label}：${reason.value}`).join(' · ')}
@@ -222,7 +231,8 @@ export function FrontlineBrowser({
             </div>
             <ChevronRight size={18} aria-hidden="true" />
           </button>
-        ))}
+          );
+        })}
       </div>
     );
   };

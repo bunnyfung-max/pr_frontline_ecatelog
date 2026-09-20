@@ -55,6 +55,17 @@ export function trail(folders: Folder[], id: string): Folder[] {
 }
 export const byOrder = <T extends { order: number; name?: string }>(a: T, b: T) =>
   a.order - b.order || (a.name || '').localeCompare(b.name || '', 'zh-HK');
+
+export function contentLinkedProductLabels(data: Catalog, content: Content): string[] {
+  const labels: string[] = [];
+  for (const link of content.eshopProducts ?? []) {
+    labels.push(link.title?.trim() || [link.brand, link.sku].filter(Boolean).join(' '));
+  }
+  for (const product of data.products.filter((item) => content.productIds.includes(item.id))) {
+    labels.push(product.name?.trim() || product.code);
+  }
+  return [...new Set(labels.map((label) => label.trim()).filter(Boolean))];
+}
 export const rootFolders = (data: Catalog) =>
   data.folders.filter((f) => !f.parentId).sort(byOrder);
 export function folderDeleteBlockers(data: Catalog, id: string): string[] {
