@@ -7,15 +7,15 @@ export const FEEDBACK_PRIORITIES = ['urgent', 'high', 'medium', 'low'] as const;
 export type FeedbackPriority = (typeof FEEDBACK_PRIORITIES)[number];
 
 export const FEEDBACK_CATEGORY_LABELS: Record<FeedbackCategory, string> = {
-  bug: 'Bugs',
-  optimization: '優化',
+  bug: '我發現問題',
+  optimization: '我想要',
 };
 
 export const FEEDBACK_PRIORITY_LABELS: Record<FeedbackPriority, string> = {
-  urgent: '緊急',
-  high: '優先',
-  medium: '中等',
-  low: 'Low',
+  urgent: '🔴 緊急',
+  high: '🟠 優先',
+  medium: '🟡 中等',
+  low: '🟢 低',
 };
 
 export const MAX_FEEDBACK_ATTACHMENTS = 5;
