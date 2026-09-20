@@ -8,6 +8,16 @@ import {
   suggestForCategory,
 } from '../src/lib/catalog-search';
 import { searchCatalog } from '../src/lib/catalog';
+import {
+  composeSearchQuery,
+  splitSearchQuery,
+} from '../src/hooks/use-catalog-search';
+
+test('compose and split search query keep category separate from visible term', () => {
+  assert.equal(composeSearchQuery('brand', 'CHEERS'), '品牌 CHEERS');
+  assert.deepEqual(splitSearchQuery('品牌 CHEERS'), { category: 'brand', term: 'CHEERS' });
+  assert.equal(composeSearchQuery('brand', ''), '');
+});
 
 test('parseSearchQuery understands category prefixes', () => {
   assert.deepEqual(parseSearchQuery('品牌 RIVO'), {

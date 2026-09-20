@@ -16,13 +16,17 @@ import {
   filterSearchMatchReasons,
   folderHasBrowseableContent,
   folderLabel,
-  parseSearchQuery,
   SEARCH_CATEGORIES,
   SEARCH_CATEGORY_LABEL,
   suggestForCategory,
   trail,
 } from '@/lib/catalog';
-import { formatCategoryQuery, useCatalogSearch } from '@/hooks/use-catalog-search';
+import {
+  composeSearchQuery,
+  searchDisplayLabel,
+  splitSearchQuery,
+  useCatalogSearch,
+} from '@/hooks/use-catalog-search';
 import { useEnrichedProductLabels } from '@/hooks/use-enriched-product-labels';
 import type { SearchCategory } from '@/lib/catalog-search';
 import { Thumb } from './ui';
@@ -45,7 +49,6 @@ export function FrontlineBrowser({
   const [input, setInput] = useState(query);
   const [searchText, setSearchText] = useState(query);
   const [activeCategory, setActiveCategory] = useState<SearchCategory | null>(null);
-  const [suggestionTerm, setSuggestionTerm] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
   const home = !folder;
   const folderId = folder?.id ?? null;
@@ -56,49 +59,60 @@ export function FrontlineBrowser({
     scope,
     active: searching,
   } = useCatalogSearch(data, folderId, searchText, { debounceMs: 0 });
-  const pendingSearch = input.trim() !== searchText.trim();
+  const composedInput = composeSearchQuery(activeCategory, input);
+  const pendingSearch = composedInput !== searchText;
 
   useEffect(() => {
-    setInput(query);
+    const split = splitSearchQuery(query);
+    setActiveCategory(split.category);
+    setInput(split.term);
     setSearchText(query);
   }, [query]);
   useEffect(() => {
-    if (input === query) return;
+    const composed = composeSearchQuery(activeCategory, input);
+    if (composed === query) {
+      setSearchText(composed);
+      return;
+    }
     const timer = setTimeout(() => {
-      const trimmed = input.trim();
-      setSearchText(trimmed);
-      onSearch(trimmed);
+      setSearchText(composed);
+      onSearch(composed);
     }, 280);
     return () => clearTimeout(timer);
-  }, [input, onSearch, query]);
-  const parsed = useMemo(() => parseSearchQuery(input), [input]);
-  const suggestions = useMemo(() => {
-    const category = activeCategory ?? parsed.category;
-    if (!category) return [];
-    const prefix = parsed.category === category ? parsed.terms.join(' ') : suggestionTerm;
-    return suggestForCategory(vocabulary, category, prefix, 8);
-  }, [activeCategory, parsed, suggestionTerm, vocabulary]);
+  }, [input, activeCategory, onSearch, query]);
 
-  const applyQuery = (value: string) => {
-    const trimmed = value.trim();
-    setInput(trimmed);
-    setSearchText(trimmed);
-    onSearch(trimmed);
-  };
+  const suggestionCategory = activeCategory ?? splitSearchQuery(searchText).category;
+  const suggestions = useMemo(() => {
+    if (!suggestionCategory) return [];
+    const items = suggestForCategory(vocabulary, suggestionCategory, input, 8);
+    if (suggestionCategory === 'product') {
+      return items.filter((term) => !/^\d{4,}$/.test(term.trim()));
+    }
+    return items;
+  }, [suggestionCategory, input, vocabulary]);
 
   const applySuggestion = (category: SearchCategory, term: string) => {
-    applyQuery(formatCategoryQuery(category, term));
-    setActiveCategory(null);
-    setSuggestionTerm('');
+    setActiveCategory(category);
+    setInput(term);
+    const composed = composeSearchQuery(category, term);
+    setSearchText(composed);
+    onSearch(composed);
   };
 
   const submit = () => {
-    if (!input.trim()) {
+    const composed = composeSearchQuery(activeCategory, input);
+    if (!composed) {
       inputRef.current?.focus();
       return;
     }
-    applyQuery(input);
+    setSearchText(composed);
+    onSearch(composed);
   };
+
+  const resultLabel = searchDisplayLabel(
+    activeCategory ?? splitSearchQuery(searchText).category,
+    input || splitSearchQuery(searchText).term,
+  );
 
   const folders = data.folders
     .filter((f) => f.parentId === (folder?.id ?? null))
@@ -243,7 +257,7 @@ export function FrontlineBrowser({
   const sceneResults = results?.scenes.map((entry) => entry.item) ?? [];
   const showSuggestions =
     suggestions.length > 0 &&
-    (activeCategory || parsed.category) &&
+    suggestionCategory &&
     !(searching && !pendingSearch && total > 0);
   return (
     <section
@@ -272,8 +286,7 @@ export function FrontlineBrowser({
               onChange={(e) => {
                 const value = e.target.value;
                 setInput(value);
-                setSuggestionTerm(value);
-                if (!value.trim()) {
+                if (!value.trim() && !activeCategory) {
                   setSearchText('');
                   onSearch('');
                 }
@@ -313,11 +326,14 @@ export function FrontlineBrowser({
                 <button
                   key={category}
                   type="button"
-                  className={`search-chip${activeCategory === category || parsed.category === category ? ' search-chip-active' : ''}`}
+                  className={`search-chip${activeCategory === category || splitSearchQuery(searchText).category === category ? ' search-chip-active' : ''}`}
                   onClick={() => {
                     setActiveCategory(category);
-                    setSuggestionTerm('');
-                    setInput(formatCategoryQuery(category, ''));
+                    setInput('');
+                    if (searching) {
+                      setSearchText('');
+                      onSearch('');
+                    }
                     inputRef.current?.focus();
                   }}
                 >
@@ -329,12 +345,11 @@ export function FrontlineBrowser({
           {showSuggestions && (
             <ul className="search-suggestions" aria-label="建議搜尋詞">
               {suggestions.map((term) => {
-                const category = (activeCategory ?? parsed.category)!;
+                const category = suggestionCategory!;
                 return (
                   <li key={`${category}-${term}`}>
                     <button type="button" onClick={() => applySuggestion(category, term)}>
-                      <strong>{SEARCH_CATEGORY_LABEL[category]}</strong>
-                      <span>{term}</span>
+                      {term}
                     </button>
                   </li>
                 );
@@ -371,7 +386,7 @@ export function FrontlineBrowser({
           <p className="result-summary" role="status">
             {pendingSearch
               ? '搜尋中…'
-              : `「${searchText}」找到 ${total} 項結果`}
+              : `「${resultLabel}」找到 ${total} 項結果`}
           </p>
           {!pendingSearch &&
             (total ? (

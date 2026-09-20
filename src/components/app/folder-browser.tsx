@@ -8,12 +8,15 @@ import {
   filterSearchMatchReasons,
   trail,
   folderDeleteBlockers,
-  parseSearchQuery,
   SEARCH_CATEGORIES,
   SEARCH_CATEGORY_LABEL,
   suggestForCategory,
 } from '@/lib/catalog';
-import { formatCategoryQuery, useCatalogSearch } from '@/hooks/use-catalog-search';
+import {
+  composeSearchQuery,
+  splitSearchQuery,
+  useCatalogSearch,
+} from '@/hooks/use-catalog-search';
 import type { SearchCategory } from '@/lib/catalog-search';
 import { useFolderDelete } from '@/hooks/use-folder-delete';
 import { useEnrichedProductLabels } from '@/hooks/use-enriched-product-labels';
@@ -35,8 +38,9 @@ export function FolderBrowser({
   edit: (c: Content) => void;
   saved: () => void;
 }) {
-  const [q, setQ] = useState('');
+  const [input, setInput] = useState('');
   const [activeCategory, setActiveCategory] = useState<SearchCategory | null>(null);
+  const composedQuery = composeSearchQuery(activeCategory, input);
   const { deleteError, deleteFolder } = useFolderDelete(data, saved);
   const {
     results,
@@ -44,20 +48,22 @@ export function FolderBrowser({
     scope,
     pending,
     active: searching,
-  } = useCatalogSearch(data, folder.id, q, { includeDrafts: cms, debounceMs: 220 });
+  } = useCatalogSearch(data, folder.id, composedQuery, { includeDrafts: cms, debounceMs: 220 });
 
-  const parsed = useMemo(() => parseSearchQuery(q), [q]);
+  const suggestionCategory = activeCategory ?? splitSearchQuery(composedQuery).category;
   const suggestions = useMemo(() => {
-    const category = activeCategory ?? parsed.category;
-    if (!category) return [];
-    const prefix = parsed.category === category ? parsed.terms.join(' ') : '';
-    return suggestForCategory(vocabulary, category, prefix, 6);
-  }, [activeCategory, parsed, vocabulary]);
+    if (!suggestionCategory) return [];
+    const items = suggestForCategory(vocabulary, suggestionCategory, input, 6);
+    if (suggestionCategory === 'product') {
+      return items.filter((term) => !/^\d{4,}$/.test(term.trim()));
+    }
+    return items;
+  }, [suggestionCategory, input, vocabulary]);
 
-  const folders = searching
+  const folders = composedQuery
     ? results?.folders.map((entry) => entry.item) || []
     : data.folders.filter((f) => f.parentId === folder.id).sort(byOrder);
-  const contents = searching
+  const contents = composedQuery
     ? results?.contents.map((entry) => entry.item) || []
     : data.contents
         .filter((c) => c.folderId === folder.id && (cms || c.status === 'published'))
@@ -69,20 +75,26 @@ export function FolderBrowser({
   const total = searching ? folders.length + contents.length : 0;
   const showSuggestions =
     suggestions.length > 0 &&
-    (activeCategory || parsed.category) &&
+    suggestionCategory &&
     !(searching && !pending && total > 0);
   return (
     <>
       <div className="search-bar">
         <Search size={21} />
         <input
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
           placeholder="搜尋產品名稱、品牌、顏色或設計風格"
           aria-label="搜尋此目錄"
         />
-        {q && (
-          <button className="text-btn" onClick={() => setQ('')}>
+        {(input || activeCategory) && (
+          <button
+            className="text-btn"
+            onClick={() => {
+              setInput('');
+              setActiveCategory(null);
+            }}
+          >
             清除
           </button>
         )}
@@ -93,10 +105,10 @@ export function FolderBrowser({
           <button
             key={category}
             type="button"
-            className={`search-chip${activeCategory === category || parsed.category === category ? ' search-chip-active' : ''}`}
+            className={`search-chip${activeCategory === category || splitSearchQuery(composedQuery).category === category ? ' search-chip-active' : ''}`}
             onClick={() => {
               setActiveCategory(category);
-              setQ(formatCategoryQuery(category, ''));
+              setInput('');
             }}
           >
             {SEARCH_CATEGORY_LABEL[category]}
@@ -106,18 +118,17 @@ export function FolderBrowser({
       {showSuggestions && (
         <ul className="search-suggestions cms-search-suggestions" aria-label="建議搜尋詞">
           {suggestions.map((term) => {
-            const category = (activeCategory ?? parsed.category)!;
+            const category = suggestionCategory!;
             return (
               <li key={`${category}-${term}`}>
                 <button
                   type="button"
                   onClick={() => {
-                    setActiveCategory(null);
-                    setQ(formatCategoryQuery(category, term));
+                    setActiveCategory(category);
+                    setInput(term);
                   }}
                 >
-                  <strong>{SEARCH_CATEGORY_LABEL[category]}</strong>
-                  <span>{term}</span>
+                  {term}
                 </button>
               </li>
             );

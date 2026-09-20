@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from 'react';
 import type { Catalog } from '@/lib/types';
 import {
   buildSearchVocabulary,
+  parseSearchQuery,
+  SEARCH_CATEGORY_LABEL,
   searchCatalogEnhanced,
   searchScopeSummary,
   type EnhancedSearchResults,
@@ -52,10 +54,39 @@ export function useCatalogSearch(
 }
 
 export function formatCategoryQuery(category: SearchCategory, term: string) {
-  const label = { product: '產品', brand: '品牌', colour: '顏色', style: '風格', estate: '屋苑' }[
-    category
-  ];
+  const label = SEARCH_CATEGORY_LABEL[category];
   return term ? `${label} ${term}` : label;
+}
+
+export function composeSearchQuery(category: SearchCategory | null, term: string) {
+  const trimmed = term.trim();
+  if (!trimmed) return '';
+  if (!category) return trimmed;
+  return formatCategoryQuery(category, trimmed);
+}
+
+export function splitSearchQuery(query: string) {
+  const trimmed = query.trim();
+  if (!trimmed) return { category: null as SearchCategory | null, term: '' };
+  for (const category of Object.keys(SEARCH_CATEGORY_LABEL) as SearchCategory[]) {
+    const label = SEARCH_CATEGORY_LABEL[category];
+    const prefix = `${label} `;
+    if (trimmed.toLowerCase().startsWith(prefix.toLowerCase())) {
+      return { category, term: trimmed.slice(prefix.length).trim() };
+    }
+    const colon = `${label}:`;
+    if (trimmed.toLowerCase().startsWith(colon.toLowerCase())) {
+      return { category, term: trimmed.slice(colon.length).trim() };
+    }
+  }
+  return { category: null, term: trimmed };
+}
+
+export function searchDisplayLabel(category: SearchCategory | null, term: string) {
+  const trimmed = term.trim();
+  if (!trimmed) return '';
+  if (!category) return trimmed;
+  return `${SEARCH_CATEGORY_LABEL[category]} ${trimmed}`;
 }
 
 export type { SearchVocabulary };
