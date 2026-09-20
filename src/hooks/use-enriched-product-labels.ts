@@ -2,41 +2,25 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import type { Catalog, Content, EshopProductLink } from '@/lib/types';
-import {
-  contentLinkedProductLabels,
-  formatEshopProductLabel,
-  formatLegacyProductLabel,
-} from '@/lib/linked-product-display';
+import { contentLinkedProductLabelsForQuery } from '@/lib/linked-product-display';
 import { api } from '@/lib/client';
 
-function labelsForContent(
-  data: Catalog,
-  content: Content,
-  liveByUrl: Map<string, EshopProductLink>,
-) {
-  const labels: string[] = [];
-  for (const link of content.eshopProducts ?? []) {
-    const live = liveByUrl.get(link.url);
-    labels.push(
-      formatEshopProductLabel(
-        live?.title
-          ? {
-              ...link,
-              title: live.title,
-              brand: live.brand || link.brand,
-              description: live.description || link.description,
-            }
-          : link,
-      ),
-    );
-  }
-  for (const product of data.products.filter((item) => content.productIds.includes(item.id))) {
-    labels.push(formatLegacyProductLabel(product));
-  }
-  return [...new Set(labels.map((label) => label.trim()).filter(Boolean))];
+function resolveLink(liveByUrl: Map<string, EshopProductLink>, link: EshopProductLink) {
+  const live = liveByUrl.get(link.url);
+  if (!live?.title) return link;
+  return {
+    ...link,
+    title: live.title,
+    brand: live.brand || link.brand,
+    description: live.description || link.description,
+  };
 }
 
-export function useEnrichedProductLabels(data: Catalog, contents: Content[]) {
+export function useEnrichedProductLabels(
+  data: Catalog,
+  contents: Content[],
+  searchQuery = '',
+) {
   const urlKey = useMemo(
     () =>
       [...new Set(contents.flatMap((content) => (content.eshopProducts ?? []).map((link) => link.url)))]
@@ -73,11 +57,14 @@ export function useEnrichedProductLabels(data: Catalog, contents: Content[]) {
     for (const content of contents) {
       map.set(
         content.id,
-        liveByUrl.size
-          ? labelsForContent(data, content, liveByUrl)
-          : contentLinkedProductLabels(data, content),
+        contentLinkedProductLabelsForQuery(
+          data,
+          content,
+          searchQuery,
+          liveByUrl.size ? (link) => resolveLink(liveByUrl, link) : undefined,
+        ),
       );
     }
     return map;
-  }, [contents, data, liveByUrl]);
+  }, [contents, data, liveByUrl, searchQuery]);
 }

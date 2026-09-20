@@ -1,4 +1,4 @@
-import type { Catalog, Content, Folder, Scene } from './types';
+import type { Catalog, Content, EshopProductLink, Folder, Product, Scene } from './types';
 
 const folderLabel = (folder: Folder) =>
   folder.id === 'housing' && folder.name === 'New Housing' ? '新屋入伙' : folder.name;
@@ -302,6 +302,36 @@ function contentFields(data: Catalog, content: Content): FieldHit[] {
     }
   }
   return fields.filter((field) => field.value?.trim());
+}
+
+function eshopLinkFields(link: EshopProductLink): FieldHit[] {
+  const fields: FieldHit[] = [
+    { label: 'eShop 產品', value: link.title, weight: 90, category: 'product' },
+    { label: '品牌', value: link.brand, weight: 85, category: 'brand' },
+    { label: 'SKU', value: link.sku, weight: 70, category: 'product' },
+    { label: 'eShop 描述', value: link.description, weight: 35, category: 'product' },
+  ];
+  return fields.filter((field) => field.value?.trim());
+}
+
+function legacyProductFields(product: Product): FieldHit[] {
+  const fields: FieldHit[] = [
+    { label: '產品', value: product.name, weight: 90, category: 'product' },
+    { label: '品牌', value: product.brand, weight: 85, category: 'brand' },
+    { label: '顏色', value: product.colour, weight: 75, category: 'colour' },
+    { label: '風格', value: product.style, weight: 75, category: 'style' },
+    { label: '型號', value: product.code, weight: 65, category: 'product' },
+    { label: '關鍵字', value: product.keywords, weight: 40, category: 'general' },
+  ];
+  return fields.filter((field) => field.value?.trim());
+}
+
+export function eshopLinkMatchesQuery(link: EshopProductLink, parsed: ParsedSearchQuery): boolean {
+  return scoreFields(eshopLinkFields(link), parsed) !== null;
+}
+
+export function legacyProductMatchesQuery(product: Product, parsed: ParsedSearchQuery): boolean {
+  return scoreFields(legacyProductFields(product), parsed) !== null;
 }
 
 function folderFields(data: Catalog, folder: Folder): FieldHit[] {

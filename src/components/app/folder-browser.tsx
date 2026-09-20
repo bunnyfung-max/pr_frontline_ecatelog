@@ -71,7 +71,7 @@ export function FolderBrowser({
   const contentReasons = new Map(
     results?.contents.map((entry) => [entry.item.id, entry.reasons]) ?? [],
   );
-  const productLabelMap = useEnrichedProductLabels(data, contents);
+  const productLabelMap = useEnrichedProductLabels(data, contents, composedQuery);
   const total = searching ? folders.length + contents.length : 0;
   const showSuggestions =
     suggestions.length > 0 &&

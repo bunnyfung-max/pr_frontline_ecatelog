@@ -129,7 +129,11 @@ export function FrontlineBrowser({
     () => (searching ? results?.contents.map((entry) => entry.item) ?? [] : contents),
     [searching, results, contents],
   );
-  const productLabelMap = useEnrichedProductLabels(data, visibleContents);
+  const productLabelMap = useEnrichedProductLabels(
+    data,
+    visibleContents,
+    searching ? searchText : '',
+  );
   const scenes = folder?.id === 'scenes' ? data.scenes.filter((s) => s.active).sort(byOrder) : [];
   const total = results
     ? results.contents.length + results.folders.length + results.scenes.length

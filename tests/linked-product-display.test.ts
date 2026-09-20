@@ -1,6 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { experienceDemoContents } from '../src/lib/experience-demo-contents';
+import { initialCatalog } from '../src/lib/seed';
 import {
+  contentLinkedProductLabelsForQuery,
   formatEshopProductLabel,
   formatLegacyProductLabel,
   filterSearchMatchReasons,
@@ -53,6 +56,16 @@ test('formatLegacyProductLabel prefers name with colour or style', () => {
     }),
     '示例雙人梳化 · 米白色',
   );
+});
+
+test('contentLinkedProductLabelsForQuery only returns products matching the search', () => {
+  const data = initialCatalog();
+  data.contents = experienceDemoContents();
+  const content = data.contents[0];
+  const labels = contentLinkedProductLabelsForQuery(data, content, '品牌 ESSENZO');
+  assert.equal(labels.length, 1);
+  assert.match(labels[0], /ESSENZO/);
+  assert.equal(labels.some((label) => /FERGAL|CHEERS/.test(label)), false);
 });
 
 test('filterSearchMatchReasons hides redundant brand hits when products are listed', () => {

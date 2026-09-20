@@ -1,4 +1,9 @@
 import type { Catalog, Content, EshopProductLink, Product } from './types';
+import {
+  eshopLinkMatchesQuery,
+  legacyProductMatchesQuery,
+  parseSearchQuery,
+} from './catalog-search';
 
 const CATEGORY_FROM_URL: Record<string, string> = {
   sofa: '梳化',
@@ -90,15 +95,39 @@ export function formatLegacyProductLabel(product: Product): string {
   return parts.filter(Boolean).join(' · ');
 }
 
-export function contentLinkedProductLabels(data: Catalog, content: Content): string[] {
+function linkedProductLabels(
+  data: Catalog,
+  content: Content,
+  resolveLink: (link: EshopProductLink) => EshopProductLink = (link) => link,
+  query = '',
+) {
+  const parsed = parseSearchQuery(query);
+  const filter = !!query.trim() && parsed.terms.length > 0;
   const labels: string[] = [];
+
   for (const link of content.eshopProducts ?? []) {
-    labels.push(formatEshopProductLabel(link));
+    const resolved = resolveLink(link);
+    if (filter && !eshopLinkMatchesQuery(resolved, parsed)) continue;
+    labels.push(formatEshopProductLabel(resolved));
   }
   for (const product of data.products.filter((item) => content.productIds.includes(item.id))) {
+    if (filter && !legacyProductMatchesQuery(product, parsed)) continue;
     labels.push(formatLegacyProductLabel(product));
   }
   return [...new Set(labels.map((label) => label.trim()).filter(Boolean))];
+}
+
+export function contentLinkedProductLabels(data: Catalog, content: Content): string[] {
+  return linkedProductLabels(data, content);
+}
+
+export function contentLinkedProductLabelsForQuery(
+  data: Catalog,
+  content: Content,
+  query: string,
+  resolveLink?: (link: EshopProductLink) => EshopProductLink,
+): string[] {
+  return linkedProductLabels(data, content, resolveLink, query);
 }
 
 export function filterSearchMatchReasons(
