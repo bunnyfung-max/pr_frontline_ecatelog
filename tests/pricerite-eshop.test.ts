@@ -3,7 +3,11 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { parsePriceriteProductHtml } from '../src/lib/pricerite-eshop-parse';
-import { isPriceriteProductUrl } from '../src/lib/pricerite-eshop-url';
+import {
+  isPriceriteEshopUrl,
+  isPriceriteProductUrl,
+  normalizePriceriteEshopUrl,
+} from '../src/lib/pricerite-eshop-url';
 
 const fixture = path.join(import.meta.dirname, 'fixtures', 'pricerite-product.html');
 
@@ -14,6 +18,14 @@ test('accepts only Pricerite eShop product HTTPS links', () => {
   assert.equal(isPriceriteProductUrl(sampleUrl), true);
   assert.equal(isPriceriteProductUrl('https://example.com/products/sofa'), false);
   assert.equal(isPriceriteProductUrl('http://www.pricerite.com.hk/hk/zh-hk/products/sofa'), false);
+});
+
+test('accepts broader Pricerite eShop HTTPS links for QR sharing', () => {
+  const bundleUrl = 'https://www.pricerite.com.hk/hk/zh-hk/promotions/summer-sale';
+  assert.equal(isPriceriteEshopUrl(bundleUrl), true);
+  assert.equal(isPriceriteEshopUrl(sampleUrl), true);
+  assert.equal(isPriceriteEshopUrl('https://example.com/promo'), false);
+  assert.equal(normalizePriceriteEshopUrl(`${bundleUrl}#section`), bundleUrl);
 });
 
 test('parses product title, brand, sku, prices and image from eShop HTML', () => {

@@ -24,6 +24,7 @@ import { useContentAssetCache } from '@/hooks/use-content-cache';
 import { usePinchZoom } from '@/hooks/use-pinch-zoom';
 import { External, Thumb } from './ui';
 import { ContentShoppingLinks, useEshopProductPrices } from './shopping-links';
+import { EshopQrPanel } from './eshop-qr-panel';
 export function Viewer({
   content,
   data,
@@ -280,6 +281,7 @@ export function Viewer({
               <h3>eShop Bundle Offer</h3>
               <span>組合推介</span>
             </div>
+            <EshopQrPanel />
             {data.offers
               .filter((o) => activeOffer(o))
               .sort(byOrder)

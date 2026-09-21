@@ -1924,6 +1924,52 @@ textarea {
   color: #a4aa9b;
   margin-top: 20px;
 }
+.eshop-qr-panel {
+  margin-bottom: 18px;
+}
+.eshop-qr-panel label {
+  display: block;
+}
+.eshop-qr-panel .field-label {
+  display: block;
+  font-size: 10px;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+.eshop-qr-panel input {
+  width: 100%;
+}
+.eshop-qr-panel .form-error {
+  margin-top: 8px;
+  font-size: 10px;
+  color: #b45309;
+}
+.eshop-qr-display {
+  margin-top: 16px;
+  padding: 18px 16px 14px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  text-align: center;
+  background: #fafbf8;
+}
+.eshop-qr-code {
+  display: inline-flex;
+  padding: 12px;
+  border-radius: 8px;
+  background: #fff;
+  border: 1px solid #e8ece2;
+}
+.eshop-qr-hint {
+  margin-top: 12px;
+  font-size: 11px;
+  color: #526047;
+}
+.eshop-qr-url {
+  margin-top: 8px;
+  font-size: 9px;
+  line-height: 1.5;
+  word-break: break-all;
+}
 .related-product {
   display: flex;
   align-items: flex-start;
