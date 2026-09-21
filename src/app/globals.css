@@ -1888,6 +1888,14 @@ textarea {
   margin-top: 19px;
   font-size: 12px;
 }
+.store-card .eshop-qr-display {
+  margin-top: 16px;
+  padding: 14px 12px 12px;
+  border: 1px solid #d8e0cf;
+  border-radius: 8px;
+  text-align: center;
+  background: #f6f9f2;
+}
 .offer-card {
   border: 1px solid var(--line);
   border-radius: 9px;
