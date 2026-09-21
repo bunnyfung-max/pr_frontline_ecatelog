@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { PurchaseLinks, ContentShoppingLinks } from '../src/components/shopping-links';
+import { PurchaseLinks, ContentShoppingLinks, StorePurchaseLink } from '../src/components/shopping-links';
 import { initialCatalog } from '../src/lib/seed';
 import { schemas } from '../src/lib/validation';
 
@@ -72,9 +72,9 @@ test('viewer shows content links, tags and cached eShop products without unrelat
   const html = renderToStaticMarkup(
     createElement(ContentShoppingLinks, { content, products: data.products }),
   );
-  for (const url of [content.storeUrl, content.eshopUrl])
-    assert.ok(html.includes(`href="${url}"`));
-  assert.equal((html.match(/<a /g) || []).length, 4);
+  assert.ok(html.includes(`href="${content.storeUrl}"`));
+  assert.equal(html.includes(`href="${content.eshopUrl}"`), false);
+  assert.equal((html.match(/<a /g) || []).length, 3);
   assert.ok(html.includes('米白色'));
   assert.ok(html.includes('梳化'));
   assert.ok(html.includes('eShop 產品'));
@@ -92,7 +92,7 @@ test('missing kit links still show tags and never borrow legacy shared settings'
     }),
   );
   const kitSection = html.split('</section>')[0];
-  assert.ok(kitSection.includes('購物連結待設定'));
+  assert.ok(kitSection.includes('自在購連結待設定'));
   assert.equal(kitSection.includes('href='), false);
   assert.ok(html.includes('米白色'));
   assert.equal(html.includes('obsolete-global'), false);
@@ -113,4 +113,12 @@ test('renderer hides unsafe legacy destinations and only shows configured button
   assert.equal((one.match(/<a /g) || []).length, 1);
   assert.ok(one.includes('前往自在購'));
   assert.equal(one.includes('前往 eShop'), false);
+});
+
+test('store purchase link only shows 自在購 button', () => {
+  const html = renderToStaticMarkup(
+    createElement(StorePurchaseLink, { storeUrl: 'https://example.com/store/kit' }),
+  );
+  assert.ok(html.includes('前往自在購'));
+  assert.equal(html.includes('前往 eShop'), false);
 });

@@ -43,6 +43,18 @@ export function PurchaseLinks({ storeUrl, eshopUrl }: { storeUrl?: string; eshop
   );
 }
 
+export function StorePurchaseLink({ storeUrl }: { storeUrl?: string }) {
+  const store = safeLink(storeUrl);
+  if (!store) return <p className="purchase-links-empty">自在購連結待設定</p>;
+  return (
+    <div className="purchase-links">
+      <External url={store} className="secondary">
+        前往自在購
+      </External>
+    </div>
+  );
+}
+
 function toLiveProduct(product: EshopProductLink): LiveEshopProduct {
   return {
     ...product,
@@ -217,8 +229,8 @@ export function ContentShoppingLinks({
       <section className="store-card content-shopping-links" aria-label="本份內容購物連結">
         <ShoppingBag size={27} aria-hidden="true" />
         <h3>{content.name}</h3>
-        <p>本份內容 / Sales Kit 專屬連結</p>
-        <PurchaseLinks storeUrl={content.storeUrl} eshopUrl={content.eshopUrl} />
+        <p>本份內容 / 自在購連結</p>
+        <StorePurchaseLink storeUrl={content.storeUrl} />
       </section>
       {tags.length > 0 && (
         <section className="content-tags" aria-label="內容標籤">
