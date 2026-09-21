@@ -1924,25 +1924,13 @@ textarea {
   color: #a4aa9b;
   margin-top: 20px;
 }
-.eshop-qr-panel {
-  margin-bottom: 18px;
-}
-.eshop-qr-panel label {
-  display: block;
-}
-.eshop-qr-panel .field-label {
-  display: block;
-  font-size: 10px;
-  color: var(--muted);
-  margin-bottom: 8px;
-}
-.eshop-qr-panel input {
-  width: 100%;
-}
-.eshop-qr-panel .form-error {
-  margin-top: 8px;
-  font-size: 10px;
-  color: #b45309;
+.offer-card .eshop-qr-display {
+  margin: 12px 0 10px;
+  padding: 14px 12px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  text-align: center;
+  background: #fafbf8;
 }
 .eshop-qr-display {
   margin-top: 16px;
@@ -1963,12 +1951,6 @@ textarea {
   margin-top: 12px;
   font-size: 11px;
   color: #526047;
-}
-.eshop-qr-url {
-  margin-top: 8px;
-  font-size: 9px;
-  line-height: 1.5;
-  word-break: break-all;
 }
 .related-product {
   display: flex;
