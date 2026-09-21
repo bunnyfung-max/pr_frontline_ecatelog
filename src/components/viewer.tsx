@@ -299,12 +299,18 @@ export function Viewer({
                   </div>
                 </article>
               ))}
-            {!data.offers.some((o) => activeOffer(o)) && (
-              <p className="muted">
-                {content.eshopUrl?.trim()
-                  ? '未有另外設定組合優惠；請使用上方本份內容 eShop QR 碼。'
-                  : '暫時沒有已啟用的組合優惠。'}
-              </p>
+            {!data.offers.some((o) => activeOffer(o)) && content.eshopUrl?.trim() && (
+              <article className="offer-card offer-card--content-link">
+                <div>
+                  <EshopQrCode url={content.eshopUrl} />
+                  <External url={content.eshopUrl} className="text-link">
+                    前往 eShop
+                  </External>
+                </div>
+              </article>
+            )}
+            {!data.offers.some((o) => activeOffer(o)) && !content.eshopUrl?.trim() && (
+              <p className="muted">暫時沒有已啟用的組合優惠。</p>
             )}
             <p className="panel-footnote">優惠由內容團隊更新，實際詳情以 eShop 為準。</p>
           </aside>

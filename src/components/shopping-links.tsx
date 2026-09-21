@@ -5,7 +5,6 @@ import { ShoppingBag } from 'lucide-react';
 import type { Content, EshopProductLink, Product } from '@/lib/types';
 import { api } from '@/lib/client';
 import { External, Thumb } from './ui';
-import { EshopQrCode } from './eshop-qr-code';
 
 function safeLink(value?: string) {
   if (!value) return '';
@@ -220,7 +219,6 @@ export function ContentShoppingLinks({
         <h3>{content.name}</h3>
         <p>本份內容 / Sales Kit 專屬連結</p>
         <PurchaseLinks storeUrl={content.storeUrl} eshopUrl={content.eshopUrl} />
-        {content.eshopUrl?.trim() && <EshopQrCode url={content.eshopUrl} />}
       </section>
       {tags.length > 0 && (
         <section className="content-tags" aria-label="內容標籤">

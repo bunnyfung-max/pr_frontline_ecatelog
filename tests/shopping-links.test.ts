@@ -74,8 +74,6 @@ test('viewer shows content links, tags and cached eShop products without unrelat
   );
   for (const url of [content.storeUrl, content.eshopUrl])
     assert.ok(html.includes(`href="${url}"`));
-  assert.ok(html.includes('eshop-qr-display'));
-  assert.ok(html.includes(content.eshopUrl));
   assert.equal((html.match(/<a /g) || []).length, 4);
   assert.ok(html.includes('米白色'));
   assert.ok(html.includes('梳化'));
