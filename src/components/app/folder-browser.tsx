@@ -1,6 +1,6 @@
 'use client';
-import { useMemo, useState } from 'react';
-import { Search, Folder, ChevronRight, ArrowRight } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Search, Folder, ChevronRight, ArrowRight, Trash2 } from 'lucide-react';
 import type { Catalog, Content, Folder as FolderType } from '@/lib/types';
 import { TYPE_LABEL, STATUS_LABEL } from '@/lib/types';
 import {
@@ -19,9 +19,11 @@ import {
 } from '@/hooks/use-catalog-search';
 import type { SearchCategory } from '@/lib/catalog-search';
 import { useFolderDelete } from '@/hooks/use-folder-delete';
+import { useContentDelete } from '@/hooks/use-content-delete';
 import { useEnrichedProductLabels } from '@/hooks/use-enriched-product-labels';
 import { Thumb, Empty } from '../ui';
 import { CmsFolderCard } from '../cms-folder-card';
+import { ContentDeleteConfirm } from './content-delete-confirm';
 import { FolderDeleteConfirm } from './folder-delete-confirm';
 
 export function FolderBrowser({
@@ -80,6 +82,26 @@ export function FolderBrowser({
     results?.contents.map((entry) => [entry.item.id, entry.reasons]) ?? [],
   );
   const productLabelMap = useEnrichedProductLabels(data, contents, composedQuery);
+  const {
+    selectedIds,
+    selectedCount,
+    allSelected,
+    someSelected,
+    toggle,
+    toggleAll,
+    requestDeleteSelected,
+    pendingDelete: pendingContentDelete,
+    cancelDelete: cancelContentDelete,
+    confirmDelete: confirmContentDelete,
+    deleting: deletingContent,
+    contentDeleteError,
+  } = useContentDelete(contents, saved);
+  const selectAllRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (selectAllRef.current) {
+      selectAllRef.current.indeterminate = someSelected && !allSelected;
+    }
+  }, [someSelected, allSelected]);
   const total = searching ? folders.length + contents.length : 0;
   const showSuggestions =
     suggestions.length > 0 &&
@@ -211,13 +233,34 @@ export function FolderBrowser({
             <>
               <div className="list-title">
                 <h2>{searching ? '搜尋結果' : '展示內容'}</h2>
-                <span>{contents.length} 項</span>
+                <div className="list-title-actions">
+                  {selectedCount > 0 && (
+                    <button
+                      type="button"
+                      className="secondary content-delete-selected"
+                      onClick={requestDeleteSelected}
+                    >
+                      <Trash2 size={15} aria-hidden="true" />
+                      刪除已選（{selectedCount}）
+                    </button>
+                  )}
+                  <span>{contents.length} 項</span>
+                </div>
               </div>
               {cms ? (
                 <div className="table-wrap">
                   <table>
                     <thead>
                       <tr>
+                        <th className="table-check">
+                          <input
+                            ref={selectAllRef}
+                            type="checkbox"
+                            checked={allSelected}
+                            onChange={toggleAll}
+                            aria-label="全選內容"
+                          />
+                        </th>
                         <th>內容名稱</th>
                         <th>類型</th>
                         <th>狀態</th>
@@ -232,8 +275,17 @@ export function FolderBrowser({
                           contentReasons.get(c.id) ?? [],
                           products,
                         );
+                        const checked = selectedIds.has(c.id);
                         return (
-                        <tr key={c.id}>
+                        <tr key={c.id} className={checked ? 'table-row-selected' : undefined}>
+                          <td className="table-check">
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => toggle(c.id)}
+                              aria-label={`選取 ${c.name}`}
+                            />
+                          </td>
                           <td>
                             <strong>{c.name}</strong>
                             <small>
@@ -348,6 +400,15 @@ export function FolderBrowser({
           error={deleteError}
           onConfirm={() => void confirmDelete()}
           onCancel={cancelDelete}
+        />
+      )}
+      {pendingContentDelete && (
+        <ContentDeleteConfirm
+          items={pendingContentDelete}
+          deleting={deletingContent}
+          error={contentDeleteError}
+          onConfirm={() => void confirmContentDelete()}
+          onCancel={cancelContentDelete}
         />
       )}
     </>
