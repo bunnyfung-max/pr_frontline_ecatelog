@@ -73,6 +73,16 @@ export function folderDeleteBlockers(data: Catalog, id: string): string[] {
   if (folder.id === 'scenes' && data.scenes.length > 0) blockers.push('仍有場景推介');
   return blockers;
 }
+
+export function folderDeletionPlan(data: Catalog, id: string) {
+  const folderIds = [...descendants(data.folders, id)].sort(
+    (a, b) => trail(data.folders, b).length - trail(data.folders, a).length,
+  );
+  const folderSet = new Set(folderIds);
+  const contentIds = data.contents.filter((c) => folderSet.has(c.folderId)).map((c) => c.id);
+  const sceneIds = id === 'scenes' ? data.scenes.map((scene) => scene.id) : [];
+  return { folderIds, contentIds, sceneIds };
+}
 export function searchCatalog(
   data: Catalog,
   folderId: string | null,

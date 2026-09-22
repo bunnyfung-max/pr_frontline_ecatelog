@@ -28,11 +28,11 @@ export function save(
     body: JSON.stringify({ entity, payload, originFolder, expectedVersion }),
   });
 }
-export function remove(entity: Entity, id: string) {
+export function remove(entity: Entity, id: string, options?: { cascade?: boolean }) {
   return api('/api/save', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action: 'delete', entity, id }),
+    body: JSON.stringify({ action: 'delete', entity, id, cascade: options?.cascade === true }),
   });
 }
 export const assetUrl = (ref: string) =>

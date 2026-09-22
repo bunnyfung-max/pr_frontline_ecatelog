@@ -10,7 +10,7 @@ import {
 } from '@/lib/server';
 import { requireCmsAccess } from '@/lib/cms-access';
 import { schemas } from '@/lib/validation';
-import { descendants, trail, folderDeleteBlockers } from '@/lib/catalog';
+import { descendants, trail, folderDeleteBlockers, folderDeletionPlan } from '@/lib/catalog';
 import type { Entity } from '@/lib/types';
 
 export async function POST(request: Request) {
@@ -24,6 +24,7 @@ export async function POST(request: Request) {
       payload?: unknown;
       originFolder?: string;
       expectedVersion?: string;
+      cascade?: boolean;
     }>(request);
 
     if (body.action === 'delete') {
@@ -35,8 +36,15 @@ export async function POST(request: Request) {
         const folder = data.folders.find((f) => f.id === id);
         if (!folder) throw new HttpError(404, '找不到此資料夾。');
         const blockers = folderDeleteBlockers(data, id);
-        if (blockers.length)
+        if (blockers.length && !body.cascade)
           throw new HttpError(400, `無法刪除：${blockers.join('、')}。請先清空後再試。`);
+        if (body.cascade) {
+          const plan = folderDeletionPlan(data, id);
+          for (const contentId of plan.contentIds) await deleteEntry('content', contentId);
+          for (const sceneId of plan.sceneIds) await deleteEntry('scene', sceneId);
+          for (const folderId of plan.folderIds) await deleteEntry('folder', folderId);
+          return json({ ok: true });
+        }
       }
       await deleteEntry(entity, id);
       return json({ ok: true });

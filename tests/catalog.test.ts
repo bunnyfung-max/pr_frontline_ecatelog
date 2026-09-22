@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import { initialCatalog } from '../src/lib/seed';
 import {
   descendants,
+  folderDeleteBlockers,
+  folderDeletionPlan,
   searchCatalog,
   publicCatalog,
   visiblePages,
@@ -29,6 +31,19 @@ test('home has exactly five roots; weekly summary never seeded', () => {
   assert.equal(d.products.length, 0);
   assert.equal(d.scenes.length, 6);
 });
+test('folder deletion plan includes nested folders, contents and scenes', () => {
+  const d = initialCatalog(true);
+  assert.deepEqual(folderDeleteBlockers(d, 'tmf'), ['仍有子資料夾']);
+  const plan = folderDeletionPlan(d, 'tmf');
+  assert.ok(plan.folderIds.includes('tmf'));
+  assert.ok(plan.folderIds.includes('tmf-centre'));
+  assert.ok(plan.folderIds.indexOf('tmf-centre') < plan.folderIds.indexOf('tmf'));
+  assert.equal(plan.contentIds.length, 0);
+  const scenes = initialCatalog();
+  assert.ok(folderDeleteBlockers(scenes, 'scenes').includes('仍有場景推介'));
+  assert.equal(folderDeletionPlan(scenes, 'scenes').sceneIds.length, scenes.scenes.length);
+});
+
 test('scope includes current and all descendants, but not siblings or parents', () => {
   const d = initialCatalog(true);
   const scope = descendants(d.folders, 'estate-a');

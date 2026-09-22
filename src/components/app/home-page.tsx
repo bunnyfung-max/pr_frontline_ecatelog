@@ -70,8 +70,11 @@ export function HomePage({
               tone={i}
               onOpen={() => navigate(f.id, true)}
               onDelete={() => void deleteFolder(f, true)}
-              deleteBlocked={blockers.length > 0}
-              deleteTitle={blockers.length ? '請先清空子目錄及內容' : `刪除 ${f.name}`}
+              deleteTitle={
+                blockers.length
+                  ? `刪除 ${f.name}（含子目錄及內容）`
+                  : `刪除 ${f.name}`
+              }
             />
           );
         })}
