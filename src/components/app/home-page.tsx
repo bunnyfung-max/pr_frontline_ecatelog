@@ -7,6 +7,7 @@ import { useFolderDelete } from '@/hooks/use-folder-delete';
 import { Empty } from '../ui';
 import { SimpleDirectory } from '../simple-directory';
 import { CmsFolderCard } from '../cms-folder-card';
+import { FolderDeleteConfirm } from './folder-delete-confirm';
 import { RootFolderForm } from './root-folder-form';
 import { rootIcons, rootIntro } from './constants';
 
@@ -23,7 +24,14 @@ export function HomePage({
 }) {
   const [q, setQ] = useState('');
   const [newRoot, setNewRoot] = useState(false);
-  const { deleteError, deleteFolder } = useFolderDelete(data, saved);
+  const {
+    deleteError,
+    requestDelete,
+    pendingDelete,
+    cancelDelete,
+    confirmDelete,
+    deleting,
+  } = useFolderDelete(data, saved);
   const roots = rootFolders(data);
   if (!cms) return <SimpleDirectory data={data} navigate={navigate} />;
   const filtered = roots.filter((f) => f.name.toLowerCase().includes(q.toLowerCase()));
@@ -69,7 +77,7 @@ export function HomePage({
               icon={Icon}
               tone={i}
               onOpen={() => navigate(f.id, true)}
-              onDelete={() => void deleteFolder(f, true)}
+              onDelete={() => requestDelete(f, true)}
               deleteTitle={
                 blockers.length
                   ? `刪除 ${f.name}（含子目錄及內容）`
@@ -87,6 +95,17 @@ export function HomePage({
           order={roots.reduce((max, f) => Math.max(max, f.order), -1) + 1}
           close={() => setNewRoot(false)}
           saved={saved}
+        />
+      )}
+      {pendingDelete && (
+        <FolderDeleteConfirm
+          name={pendingDelete.folder.name}
+          root={pendingDelete.root}
+          warnings={pendingDelete.warnings}
+          deleting={deleting}
+          error={deleteError}
+          onConfirm={() => void confirmDelete()}
+          onCancel={cancelDelete}
         />
       )}
     </>

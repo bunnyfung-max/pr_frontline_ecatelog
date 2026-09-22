@@ -22,6 +22,7 @@ import { useFolderDelete } from '@/hooks/use-folder-delete';
 import { useEnrichedProductLabels } from '@/hooks/use-enriched-product-labels';
 import { Thumb, Empty } from '../ui';
 import { CmsFolderCard } from '../cms-folder-card';
+import { FolderDeleteConfirm } from './folder-delete-confirm';
 
 export function FolderBrowser({
   data,
@@ -41,7 +42,14 @@ export function FolderBrowser({
   const [input, setInput] = useState('');
   const [activeCategory, setActiveCategory] = useState<SearchCategory | null>(null);
   const composedQuery = composeSearchQuery(activeCategory, input);
-  const { deleteError, deleteFolder } = useFolderDelete(data, saved);
+  const {
+    deleteError,
+    requestDelete,
+    pendingDelete,
+    cancelDelete,
+    confirmDelete,
+    deleting,
+  } = useFolderDelete(data, saved);
   const {
     results,
     vocabulary,
@@ -174,7 +182,7 @@ export function FolderBrowser({
                         meta={meta}
                         tone={i}
                         onOpen={() => navigate(f.id, cms)}
-                        onDelete={() => void deleteFolder(f)}
+                        onDelete={() => requestDelete(f)}
                         deleteTitle={
                           blockers.length
                             ? `刪除 ${f.name}（含子目錄及內容）`
@@ -330,6 +338,17 @@ export function FolderBrowser({
             </Empty>
           )}
         </>
+      )}
+      {pendingDelete && (
+        <FolderDeleteConfirm
+          name={pendingDelete.folder.name}
+          root={pendingDelete.root}
+          warnings={pendingDelete.warnings}
+          deleting={deleting}
+          error={deleteError}
+          onConfirm={() => void confirmDelete()}
+          onCancel={cancelDelete}
+        />
       )}
     </>
   );
