@@ -5,7 +5,6 @@ import type { Catalog, Content, Folder as FolderType } from '@/lib/types';
 import { TYPE_LABEL, STATUS_LABEL } from '@/lib/types';
 import {
   byOrder,
-  descendants,
   filterSearchMatchReasons,
   trail,
   folderDeleteBlockers,
@@ -61,18 +60,13 @@ export function FolderBrowser({
     return items;
   }, [suggestionCategory, input, vocabulary]);
 
-  const subtreeIds = useMemo(() => descendants(data.folders, folder.id), [data.folders, folder.id]);
   const folders = composedQuery
     ? results?.folders.map((entry) => entry.item) || []
     : data.folders.filter((f) => f.parentId === folder.id).sort(byOrder);
   const contents = composedQuery
     ? results?.contents.map((entry) => entry.item) || []
     : data.contents
-        .filter(
-          (c) =>
-            (cms ? subtreeIds.has(c.folderId) : c.folderId === folder.id) &&
-            (cms || c.status === 'published'),
-        )
+        .filter((c) => c.folderId === folder.id && (cms || c.status === 'published'))
         .sort(byOrder);
   const contentReasons = new Map(
     results?.contents.map((entry) => [entry.item.id, entry.reasons]) ?? [],
@@ -205,7 +199,7 @@ export function FolderBrowser({
           {contents.length > 0 && (
             <>
               <div className="list-title">
-                <h2>{searching ? '搜尋結果' : cms ? '此目錄及下層內容' : '展示內容'}</h2>
+                <h2>{searching ? '搜尋結果' : '展示內容'}</h2>
                 <span>{contents.length} 項</span>
               </div>
               {cms ? (
