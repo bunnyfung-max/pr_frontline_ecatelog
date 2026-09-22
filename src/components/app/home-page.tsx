@@ -18,7 +18,7 @@ export function HomePage({
 }: {
   data: Catalog;
   cms: boolean;
-  navigate: (id: string) => void;
+  navigate: (id: string, admin?: boolean) => void;
   saved: () => void;
 }) {
   const [q, setQ] = useState('');
@@ -68,7 +68,7 @@ export function HomePage({
               index={i}
               icon={Icon}
               tone={i}
-              onOpen={() => navigate(f.id)}
+              onOpen={() => navigate(f.id, true)}
               onDelete={() => void deleteFolder(f, true)}
               deleteBlocked={blockers.length > 0}
               deleteTitle={blockers.length ? '請先清空子目錄及內容' : `刪除 ${f.name}`}

@@ -80,14 +80,16 @@ export function Breadcrumb({
   folders,
   id,
   navigate,
+  cms = false,
 }: {
   folders: Folder[];
   id: string;
-  navigate: (id: string) => void;
+  navigate: (id: string, admin?: boolean) => void;
+  cms?: boolean;
 }) {
   return (
     <nav className="breadcrumb" aria-label="目前路徑">
-      <button onClick={() => navigate('')} aria-label="首頁">
+      <button onClick={() => navigate('', cms)} aria-label="首頁">
         <Home size={16} />
         <span className="breadcrumb-home-label">首頁</span>
       </button>
@@ -95,7 +97,7 @@ export function Breadcrumb({
         <span key={f.id}>
           <ChevronRight size={13} />
           <button
-            onClick={() => navigate(f.id)}
+            onClick={() => navigate(f.id, cms)}
             aria-current={i === all.length - 1 ? 'page' : undefined}
           >
             {folderLabel(f)}

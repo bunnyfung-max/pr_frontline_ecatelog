@@ -74,6 +74,7 @@ export function CatalogApp() {
   const [edit, setEdit] = useState<Content | 'new' | null>(null);
   const [manage, setManage] = useState<ManageKind | ''>('');
   const [newFolder, setNewFolder] = useState(false);
+  const [editFolder, setEditFolder] = useState<FolderType | null>(null);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [toast, setToast] = useState('');
   const cms = cmsMode && hasCmsAccess;
@@ -121,6 +122,7 @@ export function CatalogApp() {
     setEdit(null);
     setManage('');
     setNewFolder(false);
+    setEditFolder(null);
     setRefreshKey((k) => k + 1);
     setToast('已儲存，內容已更新。');
   };
@@ -243,7 +245,7 @@ export function CatalogApp() {
                 <button
                   key={f.id}
                   className={`nav-item ${active ? 'active' : ''}`}
-                  onClick={() => navigate(f.id)}
+                  onClick={() => navigate(f.id, true)}
                 >
                   <Icon size={19} />
                   {f.name}
@@ -279,7 +281,7 @@ export function CatalogApp() {
           ) : (
             <>
               {(folderId || cms) && !feedbackView && (
-                <Breadcrumb folders={data.folders} id={folderId} navigate={navigate} />
+                <Breadcrumb folders={data.folders} id={folderId} navigate={navigate} cms={cms} />
               )}
               {feedbackView ? (
                 <FeedbackAdmin />
@@ -349,6 +351,10 @@ export function CatalogApp() {
                           </button>
                         ) : (
                           <>
+                            <button className="secondary" onClick={() => setEditFolder(folder)}>
+                              <PencilRuler size={17} />
+                              編輯資料夾
+                            </button>
                             <button className="secondary" onClick={() => setNewFolder(true)}>
                               <Folder size={17} />
                               新增資料夾
@@ -444,6 +450,9 @@ export function CatalogApp() {
       )}
       {newFolder && (
         <FolderForm parentId={folderId} close={() => setNewFolder(false)} saved={saved} />
+      )}
+      {editFolder && (
+        <FolderForm folder={editFolder} close={() => setEditFolder(null)} saved={saved} />
       )}
       {!feedbackOpen && (
         <FeedbackFloatingButton onClick={() => setFeedbackOpen(true)} />
