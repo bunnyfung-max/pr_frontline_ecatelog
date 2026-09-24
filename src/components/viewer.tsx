@@ -22,6 +22,7 @@ import {
   type ReaderLeaf,
 } from '@/lib/sales-kit';
 import { useContentAssetCache } from '@/hooks/use-content-cache';
+import { useReaderPreload } from '@/hooks/use-reader-preload';
 import { usePinchZoom } from '@/hooks/use-pinch-zoom';
 import { preloadPdfJs } from '@/lib/pdfjs-preload';
 import { External, Thumb } from './ui';
@@ -124,6 +125,13 @@ export function Viewer({
   const pages = readerSpread(leaves, page, horizontal);
   const current = leaves[pages[0] - 1];
   const pageLoading = Boolean(current?.pending);
+  useReaderPreload({
+    leaves,
+    visiblePages: pages,
+    resolveAssetUrl,
+    pdfs,
+    resetKey: `${content.id}:${reload}:${assets.map((asset) => asset.ref).join('\0')}`,
+  });
   const { scale, targetRef: pinchRef } = usePinchZoom(page);
   const navigate = (next: number) => {
     setPage(next);
@@ -366,7 +374,7 @@ function ReaderPageMedia({
         aria-label={leaf.label}
         controls
         playsInline
-        preload="metadata"
+        preload="auto"
         onError={() => setFailed(true)}
       />
     );
