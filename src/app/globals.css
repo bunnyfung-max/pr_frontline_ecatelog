@@ -462,9 +462,40 @@ img {
   border-radius: 12px;
   background: #fff;
 }
+.feedback-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.feedback-status::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.feedback-status-open::before {
+  background: #3b82f6;
+}
+.feedback-status-solved::before {
+  background: #22c55e;
+}
+.feedback-status-future_plan::before {
+  background: #a855f7;
+}
+.feedback-status-select {
+  min-width: 120px;
+  border: 1px solid #dce1d5;
+  border-radius: 8px;
+  padding: 7px 10px;
+  font-size: 12px;
+  background: #fff;
+}
 .feedback-table {
   width: 100%;
-  min-width: 920px;
+  min-width: 1040px;
   border-collapse: collapse;
   font-size: 12px;
 }

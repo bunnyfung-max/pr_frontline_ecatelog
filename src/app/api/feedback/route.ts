@@ -9,9 +9,13 @@ import {
   supabase,
   HttpError,
 } from '@/lib/server';
-import { feedbackSubmitSchema } from '@/lib/feedback';
+import { feedbackSubmitSchema, feedbackStatusUpdateSchema } from '@/lib/feedback';
 import { ensurePendingMigrations } from '@/lib/pending-migrations';
-import { listFeedbackSubmissions, saveFeedbackSubmission } from '@/lib/feedback-repository';
+import {
+  listFeedbackSubmissions,
+  saveFeedbackSubmission,
+  updateFeedbackStatus,
+} from '@/lib/feedback-repository';
 import { rateLimit, clientKey } from '@/lib/rate-limit';
 
 export async function GET() {
@@ -44,6 +48,7 @@ export async function POST(request: Request) {
       id: randomUUID(),
       email: session.email,
       createdAt: new Date().toISOString(),
+      status: 'open' as const,
     };
     if (!demoEnabled()) await ensurePendingMigrations();
     if (demoEnabled()) {
@@ -57,6 +62,26 @@ export async function POST(request: Request) {
     if (!user) throw new HttpError(401, '請先登入員工帳戶。');
     await saveFeedbackSubmission(submission, sb, user.id);
     return json({ ok: true, id: submission.id });
+  } catch (e) {
+    return failure(e);
+  }
+}
+
+export async function PATCH(request: Request) {
+  try {
+    assertSameOrigin(request);
+    await requireSession(true);
+    const parsed = feedbackStatusUpdateSchema.safeParse(await readJsonBody(request));
+    if (!parsed.success)
+      throw new HttpError(400, parsed.error.issues[0]?.message || '請檢查狀態設定。');
+    if (!demoEnabled()) await ensurePendingMigrations();
+    if (demoEnabled()) {
+      const item = await updateFeedbackStatus(parsed.data.id, parsed.data.status);
+      return json({ ok: true, item });
+    }
+    const sb = await supabase();
+    const item = await updateFeedbackStatus(parsed.data.id, parsed.data.status, sb);
+    return json({ ok: true, item });
   } catch (e) {
     return failure(e);
   }

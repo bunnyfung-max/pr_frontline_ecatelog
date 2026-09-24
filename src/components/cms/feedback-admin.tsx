@@ -1,12 +1,15 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
-import { api, feedbackAssetUrl } from '@/lib/client';
+import { api, feedbackAssetUrl, updateFeedbackStatus } from '@/lib/client';
 import {
   FEEDBACK_CATEGORY_LABELS,
   FEEDBACK_PRIORITY_LABELS,
+  FEEDBACK_STATUS_LABELS,
   type FeedbackCategory,
   type FeedbackPriority,
+  type FeedbackResolvedStatus,
+  type FeedbackStatus,
   type FeedbackSubmission,
 } from '@/lib/feedback';
 
@@ -22,10 +25,46 @@ function formatWhen(value: string) {
   }
 }
 
+function FeedbackStatusCell({
+  item,
+  updating,
+  onUpdate,
+}: {
+  item: FeedbackSubmission;
+  updating: boolean;
+  onUpdate: (id: string, status: FeedbackResolvedStatus) => Promise<void>;
+}) {
+  const status = item.status || 'open';
+  if (status !== 'open') {
+    return (
+      <span className={`feedback-status feedback-status-${status}`}>
+        {FEEDBACK_STATUS_LABELS[status]}
+      </span>
+    );
+  }
+  return (
+    <select
+      className="feedback-status-select"
+      value="open"
+      disabled={updating}
+      aria-label={`更新 ${item.name} 的狀態`}
+      onChange={(e) => {
+        const next = e.target.value as FeedbackStatus;
+        if (next === 'solved' || next === 'future_plan') void onUpdate(item.id, next);
+      }}
+    >
+      <option value="open">{FEEDBACK_STATUS_LABELS.open}</option>
+      <option value="solved">{FEEDBACK_STATUS_LABELS.solved}</option>
+      <option value="future_plan">{FEEDBACK_STATUS_LABELS.future_plan}</option>
+    </select>
+  );
+}
+
 export function FeedbackAdmin() {
   const [items, setItems] = useState<FeedbackSubmission[]>([]);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(true);
+  const [updatingId, setUpdatingId] = useState('');
 
   const load = async () => {
     setBusy(true);
@@ -37,6 +76,21 @@ export function FeedbackAdmin() {
       setError((e as Error).message);
     } finally {
       setBusy(false);
+    }
+  };
+
+  const changeStatus = async (id: string, status: FeedbackResolvedStatus) => {
+    setUpdatingId(id);
+    setError('');
+    try {
+      const result = await updateFeedbackStatus(id, status);
+      setItems((current) =>
+        current.map((item) => (item.id === id ? result.item : item)),
+      );
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setUpdatingId('');
     }
   };
 
@@ -79,6 +133,7 @@ export function FeedbackAdmin() {
                 <th>電郵</th>
                 <th>類別</th>
                 <th>重要性</th>
+                <th>狀態</th>
                 <th>描述</th>
                 <th>附件</th>
               </tr>
@@ -91,6 +146,13 @@ export function FeedbackAdmin() {
                   <td>{item.email || '—'}</td>
                   <td>{FEEDBACK_CATEGORY_LABELS[item.category as FeedbackCategory]}</td>
                   <td>{FEEDBACK_PRIORITY_LABELS[item.priority as FeedbackPriority]}</td>
+                  <td>
+                    <FeedbackStatusCell
+                      item={item}
+                      updating={updatingId === item.id}
+                      onUpdate={changeStatus}
+                    />
+                  </td>
                   <td className="feedback-table-desc">{item.description}</td>
                   <td>
                     {item.attachments.length ? (

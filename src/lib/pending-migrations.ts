@@ -8,6 +8,7 @@ const migrationFiles = [
   '006_app_migrations.sql',
   '005_feedback.sql',
   '007_feedback_reporter_email.sql',
+  '008_feedback_status.sql',
 ] as const;
 
 let ensurePromise: Promise<string[]> | null = null;
