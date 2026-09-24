@@ -131,13 +131,21 @@ test('cacheable assets include uploaded refs but skip demo fixtures and external
   const d = initialCatalog(true);
   const kit = d.contents.find((c) => c.id === 'kit-a')!;
   assert.equal(cacheableAssetRefs(kit).length, 0);
-  assert.equal(
+  assert.deepEqual(
     cacheableAssetRefs({
       ...kit,
       files: ['asset:plan.png', 'https://example.com/promo'],
       cover: 'asset:cover.png',
-    }).length,
-    2,
+    }).sort(),
+    ['asset:cover.png', 'asset:plan.png'],
+  );
+  assert.deepEqual(
+    cacheableAssetRefs({
+      ...kit,
+      files: ['asset:plan.png', 'asset:clip.mp4'],
+      cover: 'asset:cover.png',
+    }).sort(),
+    ['asset:cover.png', 'asset:plan.png'],
   );
 });
 test('rotation preserves current position and never duplicates odd last page', () => {

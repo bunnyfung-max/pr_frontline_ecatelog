@@ -1,5 +1,6 @@
 import type { Catalog, Content, Folder, Offer, Scene } from './types';
 import { searchCatalogEnhanced } from './catalog-search';
+import { fileKind } from './sales-kit';
 
 export interface SearchResults {
   contents: Content[];
@@ -147,7 +148,11 @@ export function cacheableAssetRefs(c: Content): string[] {
   return [
     ...new Set(
       contentAssets(c).filter(
-        (ref) => ref && !/^https?:\/\//i.test(ref) && !ref.startsWith('/demo/'),
+        (ref) =>
+          ref &&
+          !/^https?:\/\//i.test(ref) &&
+          !ref.startsWith('/demo/') &&
+          fileKind(ref) !== 'video',
       ),
     ),
   ];

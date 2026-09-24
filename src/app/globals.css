@@ -1116,6 +1116,14 @@ tr.table-row-selected {
 .content-image .thumb img {
   object-fit: cover;
 }
+.content-image .content-thumb-placeholder,
+.search-thumbnail .content-thumb-placeholder {
+  height: 100%;
+  min-height: 0;
+}
+.content-thumb-placeholder svg {
+  opacity: 0.72;
+}
 .type-badge {
   position: absolute;
   left: 12px;
@@ -1914,11 +1922,27 @@ textarea {
   max-width: 28ch;
 }
 .paper img,
-.paper canvas {
+.paper canvas,
+.paper .reader-video {
   display: block;
   width: 100%;
   height: auto;
   object-fit: contain;
+}
+.paper .reader-video {
+  background: #161b15;
+}
+.paper-type-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  padding: 4px 7px;
+  border-radius: 4px;
+  background: #ffffffed;
+  font-size: 9px;
+  color: #59614f;
+  line-height: 1.2;
+  pointer-events: none;
 }
 .paper-number {
   position: absolute;
@@ -3034,9 +3058,15 @@ fieldset:disabled .kit-file-button {
   max-width: 28ch;
 }
 .paper img,
-.paper canvas {
+.paper canvas,
+.paper .reader-video {
   max-height: 100cqh;
   object-fit: contain;
+}
+.paper .reader-video {
+  display: block;
+  width: 100%;
+  background: #161b15;
 }
 .page-spread-host.is-zoomed .reader-page-error {
   display: flex;

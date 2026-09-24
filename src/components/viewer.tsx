@@ -11,9 +11,10 @@ import {
 } from 'lucide-react';
 import type { PDFDocumentProxy } from 'pdfjs-dist';
 import type { Catalog, Content } from '@/lib/types';
-import { TYPE_LABEL } from '@/lib/types';
 import { activeOffer, byOrder } from '@/lib/catalog';
+import { contentReaderSubtitle } from '@/lib/content-display';
 import {
+  FILE_KIND_LABEL,
   readerAssets,
   readerLeaves,
   readerSpread,
@@ -159,7 +160,7 @@ export function Viewer({
           <small>
             {previewOrientation
               ? `預覽 · ${horizontal ? '橫向雙頁' : '直向單頁'}`
-              : `${content.salesKit ? 'Sales Kit' : TYPE_LABEL[content.type]} · ${horizontal ? '橫向雙頁' : '直向單頁'}`}
+              : contentReaderSubtitle(content, assets, horizontal)}
           </small>
         </div>
         <button
@@ -180,7 +181,7 @@ export function Viewer({
               <div className="loading" role="status">
                 正在載入 PDF 頁次…
               </div>
-            ) : current?.kind === 'image' || current?.kind === 'pdf' ? (
+            ) : current && current.kind !== 'link' ? (
               <div
                 className={`page-spread-host${scale > 1 ? ' is-zoomed' : ''}`}
                 style={scale > 1 ? { width: `${scale * 100}%`, minWidth: '100%' } : undefined}
@@ -205,21 +206,13 @@ export function Viewer({
                           resolveAssetUrl={resolveAssetUrl}
                           onRetry={() => setReload((k) => k + 1)}
                         />
+                        <span className="paper-type-badge">{FILE_KIND_LABEL[leaf.kind]}</span>
                         <span className="paper-number">{n}</span>
                       </div>
                     );
                   })}
                 </div>
               </div>
-            ) : current?.kind === 'video' ? (
-              <ReaderPageMedia
-                contentName={content.name}
-                leaf={current}
-                page={page}
-                reload={reload}
-                resolveAssetUrl={resolveAssetUrl}
-                onRetry={() => setReload((k) => k + 1)}
-              />
             ) : current?.kind === 'link' ? (
               <div className="link-preview">
                 <ExternalLink size={44} />
@@ -354,6 +347,14 @@ function ReaderPageMedia({
     return <PdfPage pdf={pdf} page={leaf.pdfPage!} />;
   }
   if (leaf.kind === 'video') {
+    if (failed) {
+      return (
+        <div className="reader-page-error">
+          <p role="alert">{leaf.label}：影片未能載入，請檢查檔案或網絡連線。</p>
+          <button type="button" className="secondary" onClick={onRetry}>重新載入</button>
+        </div>
+      );
+    }
     return (
       <video
         className="reader-video"

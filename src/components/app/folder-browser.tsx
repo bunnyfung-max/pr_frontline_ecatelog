@@ -21,7 +21,8 @@ import type { SearchCategory } from '@/lib/catalog-search';
 import { useFolderDelete } from '@/hooks/use-folder-delete';
 import { useContentDelete } from '@/hooks/use-content-delete';
 import { useEnrichedProductLabels } from '@/hooks/use-enriched-product-labels';
-import { Thumb, Empty } from '../ui';
+import { Empty } from '../ui';
+import { ContentThumb } from '../content-thumb';
 import { CmsFolderCard } from '../cms-folder-card';
 import { ContentDeleteConfirm } from './content-delete-confirm';
 import { FolderDeleteConfirm } from './folder-delete-confirm';
@@ -343,7 +344,7 @@ export function FolderBrowser({
                       onClick={() => navigate(folder.id, cms, c.id)}
                     >
                       <div className="content-image">
-                        <Thumb src={c.cover || (c.type === 'image' ? c.files[0] : '')} />
+                        <ContentThumb content={c} />
                         <span className="type-badge">
                           {c.salesKit ? 'Sales Kit' : TYPE_LABEL[c.type]}
                         </span>

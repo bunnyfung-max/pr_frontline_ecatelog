@@ -54,6 +54,23 @@ export function fileKind(ref: string): ContentType {
   if (/\.(mp4|webm)$/i.test(ref)) return 'video';
   return 'image';
 }
+
+export const FILE_KIND_LABEL: Record<ContentType, string> = {
+  image: '圖片',
+  pdf: 'PDF',
+  video: '影片',
+  link: '連結',
+};
+
+export function readerAssetLabel(content: Content, index: number, ref: string): string {
+  if (content.salesKit) {
+    return index < KIT_RESERVED
+      ? KIT_SLOTS[index]
+      : `額外檔案 ${index - KIT_RESERVED + 1}`;
+  }
+  const kind = content.type === 'link' ? 'link' : fileKind(ref);
+  return `第 ${index + 1} 項 · ${FILE_KIND_LABEL[kind]}`;
+}
 export interface ReaderAsset {
   ref: string;
   kind: ContentType;
@@ -67,9 +84,7 @@ export function readerAssets(content: Content): ReaderAsset[] {
           {
             ref,
             kind: content.type === 'link' ? 'link' : fileKind(ref),
-            label: content.salesKit
-              ? KIT_SLOTS[i] || `額外檔案 ${i - KIT_RESERVED + 1}`
-              : `第 ${i + 1} 份`,
+            label: readerAssetLabel(content, i, ref),
           },
         ],
   );

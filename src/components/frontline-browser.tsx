@@ -29,7 +29,7 @@ import {
 } from '@/hooks/use-catalog-search';
 import { useEnrichedProductLabels } from '@/hooks/use-enriched-product-labels';
 import type { SearchCategory } from '@/lib/catalog-search';
-import { Thumb } from './ui';
+import { ContentThumb } from './content-thumb';
 
 export function FrontlineBrowser({
   data,
@@ -225,7 +225,7 @@ export function FrontlineBrowser({
           return (
           <button className="search-content-entry" key={c.id} onClick={() => open(c)}>
             <div className="search-thumbnail">
-              <Thumb src={c.cover || (c.type === 'image' ? c.files[0] : '')} />
+              <ContentThumb content={c} />
             </div>
             <div className="search-content-copy">
               <small>
