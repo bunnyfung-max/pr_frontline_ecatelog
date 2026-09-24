@@ -64,16 +64,104 @@ Weekly Summary 不包含，Weekly Eposter 保留。六個場景名称已建立�
 
 業務需求、User Flow 及安全要求見 [docs/IT-REQUIREMENTS.md](docs/IT-REQUIREMENTS.md)。
 
-Storage `catalog` bucket 為 private，每檔上限 50 MB。瀏覽器經 `/api/storage/prepare` 取得上載目標後直傳 Supabase（不經 Vercel request body）；`STORAGE_PROVIDER` 可日後切換至 S3。格式白名單及大小在客戶端、伺服器與 bucket 同時限制。SVG、HTML 不接受上載。少量 repo-native `/demo/*.svg` 僅用於示意。
+## 物件儲存（Catalog 素材）
 
-檔案以新名稱上載，不覆寫舊檔，避免替換失敗造成資料遺失。取消上載／替換後的無引用檔案會保留，須由管理員確認後清理；不含自動 GC。私人素材 signed URL 有效 120 秒，已簽出的 URL 不會因下架即時撤銷。前端有權取閱者仍可能儲存／截圖，這不是 DRM。
+CMS 上載的圖片、PDF、影片走 **Storage Provider 抽象層**（`src/lib/storage/`）。Catalog 只儲存 **provider 中性的 ref**，格式為：
+
+```text
+asset:{userId}/{uuid}.{ext}
+```
+
+例如 `asset:9f3c…/a1b2….mp4`。日後換 Supabase → S3，**不必改 catalog 內容或前端 Viewer**；只改環境變數及 provider 實作。
+
+### 上載流程（現時）
+
+```text
+瀏覽器
+  ① POST /api/storage/prepare   （JSON：檔名、大小、MIME；須 CMS 已解鎖 + admin）
+  ② 直傳物件儲存               （檔案內容不經 Vercel request body）
+  ③ POST /api/storage/complete （確認物件已存在）
+  → 得到 asset: ref，再存入 catalog
+```
+
+讀取時：`/api/asset?ref=asset:…` 驗證 catalog 權限後，簽發 **120 秒** signed URL（Supabase）或回傳本機檔案（demo）。
+
+相關程式：
+
+| 路徑 | 用途 |
+|---|---|
+| `src/lib/storage/server/providers/supabase.ts` | 現時預設（Supabase Storage） |
+| `src/lib/storage/server/providers/s3.ts` | 日後 S3（骨架已備，待接 AWS SDK） |
+| `src/lib/storage/server/providers/local.ts` | 本機 demo（`.data/uploads/`） |
+| `src/lib/storage/client/upload.ts` | 瀏覽器上載編排 |
+| `src/app/api/storage/prepare` / `complete` | 上載準備與確認 |
+
+### 接駁 Supabase Storage（現時預設）
+
+1. 執行 `supabase/migrations/001_catalog.sql` 後，會建立 **private** bucket `catalog`，單檔上限 **50 MB**，允許 MIME：`image/jpeg`、`image/png`、`image/webp`、`application/pdf`、`video/mp4`、`video/webm`。
+2. Storage RLS：只有 **catalog admin** 可上載，且 object key 首段必須是 `auth.uid()`（即 `{userId}/…`）。前線帳戶只能讀取已發布內容引用的素材。
+3. 環境變數（Vercel / `.env.local`）：
+
+   ```env
+   STORAGE_PROVIDER=supabase
+   STORAGE_BUCKET=catalog
+   NEXT_PUBLIC_SUPABASE_URL=…
+   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=…
+   ```
+
+4. **不要**把上載改回 `/api/upload` 代理模式；該 route 僅供本機 demo，hosted 環境會拒絕（避免 Vercel ~4.5 MB body 限制導致影片失敗）。
+5. 部署後驗收：以 admin 登入 CMS → 解鎖 → Sales Kit「其他檔案」上載一個 **MP4**（建議先試 < 50 MB）。若失敗，在 DevTools → Network 檢查 `prepare`、Supabase Storage 請求及錯誤訊息。
+
+### 日後接駁 Amazon S3
+
+切換步驟（catalog 素材；**試用回饋附件仍用 Supabase `feedback` bucket，不在此範圍**）：
+
+1. 建立 **private** S3 bucket（建議與應用同區域，例如 `ap-southeast-1`）。
+2. 建立 IAM 使用者或 role，至少具備目標 bucket 的 `s3:PutObject`、`s3:GetObject`（及日後 multipart 所需的 `s3:AbortMultipartUpload` 等）。
+3. 設定環境變數：
+
+   ```env
+   STORAGE_PROVIDER=s3
+   STORAGE_BUCKET=catalog          # S3 object key 前缀，例如 catalog/{userId}/{uuid}.mp4
+   STORAGE_S3_BUCKET=your-bucket
+   AWS_REGION=ap-southeast-1
+   AWS_ACCESS_KEY_ID=…
+   AWS_SECRET_ACCESS_KEY=…
+   ```
+
+4. 完成 `src/lib/storage/server/providers/s3.ts`：安裝 `@aws-sdk/client-s3`、`@aws-sdk/s3-request-presigner`，在 `prepareUpload` 簽發 presigned PUT URL，在 `getReadUrl` 簽發 presigned GET URL。`src/lib/storage/client/upload.ts` 已支援 `kind: 's3'` 的直傳。
+5. **既有 `asset:` ref 可继续使用**；新上載走 S3。若要搬遷舊檔，可寫一次性腳本 copy object 並保留相同 key 結構，無需改 catalog JSON。
+6. 若影片將超過 **50 MB** 或 **幾 GB**，須另做：**提高上限設定**、S3 **multipart upload**、Viewer **串流播放**（不要走 IndexedDB 全量 cache）。現時 MVP 仍為每檔 50 MB。
+
+### 特別注意（現時限制）
+
+| 項目 | 說明 |
+|---|---|
+| 單檔大小 | **50 MB**（客戶端、`uploadSchema`、Supabase bucket 三處一致） |
+| 允許格式 | JPG、PNG、WebP、PDF、MP4、WebM；**不接受 SVG、HTML** |
+| iPhone 影片 | `.mov` / `video/quicktime` 會在前端視作 **MP4** 上載（仍須為有效 MP4 內容） |
+| 上載權限 | 須 **admin** + CMS 解鎖；前線帳戶不能上載 catalog 素材 |
+| 不經 Vercel body | 大檔必須直傳 Supabase/S3；否則會在 serverless 層失敗 |
+| 本機 demo | `DEMO_MODE=true` 時自動用 **local** provider，檔案在 `.data/uploads/` |
+| 孤兒檔案 | 上載後若未存入 catalog、或替換後舊 ref 無引用，**不會自動刪除**；需管理員定期清理 storage |
+| 讀取連結 | Signed URL **120 秒**；已簽出連結不會因下架即時失效；**不是 DRM** |
+| 回饋附件 | 試用回饋截圖走 `/api/feedback/upload` → Supabase **`feedback`** bucket（5 MB 圖片），與 catalog 儲存分開 |
+| S3 狀態 | `STORAGE_PROVIDER=s3` 已可選，但 **presigned 實作未完成**；生產環境請保持 `supabase` |
+
+### 常見上載失敗原因
+
+- **影片太大**：超過 50 MB → 壓縮或分段，或日後接 S3 multipart 並提高上限。
+- **格式不符**：瀏覽器報 `video/quicktime` 但內容不是 MP4 → 用工具轉成 MP4。
+- **未解鎖 CMS**：只登入但未輸入 CMS 密碼 → 上載 API 會 403。
+- **非 admin 帳戶**：Storage RLS 拒絕 insert。
+- **誤用舊上載路徑**：hosted 環境呼叫 `/api/upload` → 410；應走 `prepare` → 直傳 → `complete`。
 
 ## Vercel Preview 部署
 
 1. 先將程式推送至此 GitHub repo。空 repo 尚未有 default branch 時，owner 須初始化首個 branch；不要強制推送現有 branch。
 2. Vercel Import Git Repository → 選擇此 repo → Next.js preset；root 是 repo 根目錄。
-3. Node.js 24.x，install `pnpm install --frozen-lockfile`，build `pnpm build`。Supabase publishable 環境變數見 `.env.example`。
-4. 先設定 Preview environment 的兩個 `NEXT_PUBLIC_SUPABASE_*` 變數。**不要設定 DEMO_MODE=true**；hosted build 不允許本機 demo。
+3. Node.js 24.x，install `pnpm install --frozen-lockfile`，build `pnpm build`。環境變數見 `.env.example`（至少 `NEXT_PUBLIC_SUPABASE_*`、`CMS_UNLOCK_SECRET`、`STORAGE_PROVIDER=supabase`、`STORAGE_BUCKET=catalog`）。
+4. 先設定 Preview environment 的 Supabase 及 Storage 變數。**不要設定 DEMO_MODE=true**；hosted build 不允許本機 demo。
 5. 將 Supabase Auth 的 Site URL / approved redirect URLs 設定為項目的實際 URL。不要使用跨項目通配 redirect。
 6. 首次 import 可能建立 Vercel production deployment；正式發佈前請先配置 Vercel Deployment Protection，並保留網站登入保護。優先在 feature branch 建立 Preview，確認後才指向正式域名。
 7. 按 [docs/IT-REQUIREMENTS.md](docs/IT-REQUIREMENTS.md) 以兩種角色及真實平板驗收後，再批准 Production。
