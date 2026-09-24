@@ -47,7 +47,10 @@ export function mimesForContentType(type: ContentType): readonly string[] {
 }
 
 export function acceptForContentType(type: ContentType): string {
-  return mimesForContentType(type).join(',');
+  if (type === 'image') return IMAGE_MIMES.join(',');
+  if (type === 'pdf') return 'application/pdf,.pdf';
+  if (type === 'video') return 'video/mp4,video/webm,.mp4,.webm,.mov,.m4v';
+  return '';
 }
 
 export function isImageMime(mime: string): boolean {

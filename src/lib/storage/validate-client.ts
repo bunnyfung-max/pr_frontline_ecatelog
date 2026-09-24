@@ -10,6 +10,11 @@ export function resolveUploadMime(file: File): UploadMime | null {
   return null;
 }
 
+export function matchesUploadMime(file: File, allowed: readonly string[]): boolean {
+  const mime = resolveUploadMime(file);
+  return mime !== null && allowed.includes(mime);
+}
+
 export async function validateUploadFile(file: File): Promise<UploadMime> {
   const mime = resolveUploadMime(file);
   if (!mime) throw new Error('只支援 JPG、PNG、WebP、PDF、MP4 或 WebM。');

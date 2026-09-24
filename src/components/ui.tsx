@@ -112,11 +112,14 @@ export function Modal({
   children,
   close,
   wide = false,
+  dismissible = true,
 }: {
   title: string;
   children: React.ReactNode;
   close: () => void;
   wide?: boolean;
+  /** When false, only explicit close controls dismiss the dialog (not Esc or backdrop). */
+  dismissible?: boolean;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
@@ -130,7 +133,7 @@ export function Modal({
       className={`modal ${wide ? 'wide' : ''}`}
       onCancel={(e) => {
         e.preventDefault();
-        close();
+        if (dismissible) close();
       }}
     >
       <div className="modal-head">

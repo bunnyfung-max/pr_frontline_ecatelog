@@ -18,6 +18,7 @@ import {
   acceptForContentType,
   mimesForContentType,
 } from '@/lib/upload-policy';
+import { matchesUploadMime } from '@/lib/storage/validate-client';
 import { Modal, Thumb } from '../ui';
 import { Viewer } from '../viewer';
 import { SalesKitUpload } from '../sales-kit-upload';
@@ -89,7 +90,7 @@ export function ContentEditor({
       if (value.type === 'image' && value.files.length + selected.length > MAX_CONTENT_PAGES)
         throw new Error(`每份圖片目錄最多 ${MAX_CONTENT_PAGES} 頁。`);
       const allowed = mimesForContentType(value.type);
-      if (selected.some((f) => !allowed.includes(f.type)))
+      if (selected.some((f) => !matchesUploadMime(f, allowed)))
         throw new Error('所選檔案與內容類型不符。');
       const uploaded: string[] = [];
       for (const file of selected) uploaded.push(await upload(file));
@@ -121,6 +122,7 @@ export function ContentEditor({
       close={() => {
         if (!busy && !uploading) close();
       }}
+      dismissible={false}
       wide
     >
       <form

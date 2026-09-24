@@ -4,6 +4,7 @@ import { ArrowDown, ArrowUp, FileText, Film, UploadCloud, X } from 'lucide-react
 import type { Content } from '@/lib/types';
 import { upload } from '@/lib/client';
 import { MAX_UPLOAD_BYTES } from '@/lib/upload-policy';
+import { matchesUploadMime } from '@/lib/storage/validate-client';
 import {
   IMAGE_MIMES,
   KIT_MIMES,
@@ -55,7 +56,7 @@ export function SalesKitUpload({
     onError('');
     try {
       const allowed = slot === undefined ? KIT_MIMES : IMAGE_MIMES;
-      if (selected.some((file) => !(allowed as readonly string[]).includes(file.type)))
+      if (selected.some((file) => !matchesUploadMime(file, allowed)))
         throw new Error(
           slot === undefined
             ? '只支援 JPG、PNG、WebP、PDF、MP4 或 WebM。'
@@ -214,7 +215,7 @@ export function SalesKitUpload({
           type="file"
           aria-label="加入 Sales Kit 額外檔案"
           multiple
-          accept={KIT_MIMES.join(',')}
+          accept="image/jpeg,image/png,image/webp,application/pdf,.pdf,video/mp4,video/webm,.mp4,.webm,.mov,.m4v"
           onChange={(event) => {
             void select(Array.from(event.target.files || []));
             event.target.value = '';
