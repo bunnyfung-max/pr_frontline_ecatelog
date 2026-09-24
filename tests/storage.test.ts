@@ -23,6 +23,7 @@ test('upload mime resolver accepts common video extensions', () => {
 test('content and sales kit upload surfaces accept video where intended', () => {
   const mov = { name: 'clip.mov', type: 'video/quicktime', size: 1 } as File;
   assert.equal(matchesUploadMime(mov, mimesForContentType('video')), true);
+  assert.equal(matchesUploadMime(mov, mimesForContentType('image')), true);
   assert.equal(matchesUploadMime(mov, mimesForContentType('pdf')), false);
   assert.match(acceptForContentType('video'), /\.mov/);
 });

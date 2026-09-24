@@ -108,7 +108,13 @@ test('legacy kits and ordinary image, PDF, video and link content keep their ori
   assert.deepEqual(kitFiles(legacy.files).slice(0, legacy.files.length), legacy.files);
   assert.equal(
     schemas.content.safeParse({ ...legacy, files: [...legacy.files, 'asset:extra.pdf'] }).success,
-    false,
+    true,
+  );
+  assert.equal(
+    schemas.content
+      .safeParse({ ...legacy, files: [...legacy.files, 'asset:extra.pdf', 'asset:clip.mp4'] })
+      .success,
+    true,
   );
   for (const [type, file] of [
     ['pdf', 'asset:a.pdf'],

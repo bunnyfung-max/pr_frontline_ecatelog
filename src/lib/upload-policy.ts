@@ -39,15 +39,19 @@ export function mimeFromExtension(ext: string): UploadMime | undefined {
   return EXT_TO_MIME[ext.toLowerCase()];
 }
 
+export const GALLERY_MIMES = UPLOAD_MIMES;
+
 export function mimesForContentType(type: ContentType): readonly string[] {
-  if (type === 'image') return IMAGE_MIMES;
+  if (type === 'image') return GALLERY_MIMES;
   if (type === 'pdf') return ['application/pdf'];
   if (type === 'video') return ['video/mp4', 'video/webm'];
   return [];
 }
 
 export function acceptForContentType(type: ContentType): string {
-  if (type === 'image') return IMAGE_MIMES.join(',');
+  if (type === 'image') {
+    return 'image/jpeg,image/png,image/webp,application/pdf,.pdf,video/mp4,video/webm,.mp4,.webm,.mov,.m4v';
+  }
   if (type === 'pdf') return 'application/pdf,.pdf';
   if (type === 'video') return 'video/mp4,video/webm,.mp4,.webm,.mov,.m4v';
   return '';

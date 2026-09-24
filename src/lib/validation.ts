@@ -89,10 +89,10 @@ export const schemas = {
         if (file.startsWith('asset:')) {
           const ext = file.split('.').pop()!;
           const allowed =
-            c.salesKit && i >= KIT_RESERVED
-              ? ['png', 'jpg', 'jpeg', 'webp', 'pdf', 'mp4', 'webm']
-              : c.type === 'image'
-                ? ['png', 'jpg', 'jpeg', 'webp']
+            c.salesKit && i < KIT_RESERVED
+              ? ['png', 'jpg', 'jpeg', 'webp']
+              : c.salesKit || c.type === 'image'
+                ? ['png', 'jpg', 'jpeg', 'webp', 'pdf', 'mp4', 'webm']
                 : c.type === 'pdf'
                   ? ['pdf']
                   : c.type === 'video'

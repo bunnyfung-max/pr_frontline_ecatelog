@@ -8,6 +8,8 @@ import {
   Eye,
   Save,
   Check,
+  FileText,
+  Film,
 } from 'lucide-react';
 import type { Catalog, Content, ContentType, Status } from '@/lib/types';
 import { TYPE_LABEL } from '@/lib/types';
@@ -22,7 +24,7 @@ import { matchesUploadMime } from '@/lib/storage/validate-client';
 import { Modal, Thumb } from '../ui';
 import { Viewer } from '../viewer';
 import { SalesKitUpload } from '../sales-kit-upload';
-import { kitFiles, kitComplete } from '@/lib/sales-kit';
+import { fileKind, kitFiles, kitComplete } from '@/lib/sales-kit';
 import { makeId } from './utils';
 import { TagField } from './fields/tag-field';
 import { EshopProductField } from './fields/eshop-product-field';
@@ -240,7 +242,7 @@ export function ContentEditor({
                     </strong>
                     <span>
                       {value.type === 'image'
-                        ? 'JPG / PNG / WebP · 可多選及調整頁次'
+                        ? '圖片 / PDF / MP4 / WebM · 可混合上載及調整次序'
                         : value.type === 'pdf'
                           ? 'PDF · 自動逐頁展示'
                           : 'MP4 / WebM · 瀏覽器播放'}
@@ -259,11 +261,21 @@ export function ContentEditor({
                     />
                   </label>
                   <div className="upload-list">
-                    {value.files.map((file, i) => (
+                    {value.files.map((file, i) => {
+                      const kind = fileKind(file);
+                      const kindLabel =
+                        kind === 'image' ? '圖片' : kind === 'pdf' ? 'PDF' : kind === 'video' ? '影片' : '連結';
+                      return (
                       <div key={`${file}-${i}`}>
                         <span>
-                          第 {i + 1} {value.type === 'image' ? '頁' : '份'}
-                          {value.type === 'image' && <Thumb src={file} />}
+                          第 {i + 1} 項 · {kindLabel}
+                          {kind === 'image' ? (
+                            <Thumb src={file} />
+                          ) : kind === 'pdf' ? (
+                            <FileText size={28} />
+                          ) : kind === 'video' ? (
+                            <Film size={28} />
+                          ) : null}
                         </span>
                         <div>
                           {value.type === 'image' && (
@@ -272,7 +284,7 @@ export function ContentEditor({
                                 type="button"
                                 className="icon-btn"
                                 disabled={!i}
-                                aria-label={`第 ${i + 1} 頁上移`}
+                                aria-label={`第 ${i + 1} 項上移`}
                                 onClick={() => {
                                   const a = [...value.files];
                                   [a[i], a[i - 1]] = [a[i - 1], a[i]];
@@ -285,7 +297,7 @@ export function ContentEditor({
                                 type="button"
                                 className="icon-btn"
                                 disabled={i === value.files.length - 1}
-                                aria-label={`第 ${i + 1} 頁下移`}
+                                aria-label={`第 ${i + 1} 項下移`}
                                 onClick={() => {
                                   const a = [...value.files];
                                   [a[i], a[i + 1]] = [a[i + 1], a[i]];
@@ -311,7 +323,8 @@ export function ContentEditor({
                           </button>
                         </div>
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </>
               )}

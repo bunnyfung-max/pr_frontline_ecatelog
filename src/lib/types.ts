@@ -91,7 +91,7 @@ export interface Session {
 }
 export const ROOTS = ['housing', 'pop', 'tmf', 'creator', 'scenes'] as const;
 export const TYPE_LABEL: Record<ContentType, string> = {
-  image: '圖片',
+  image: '圖文影片',
   pdf: 'PDF',
   video: '影片',
   link: '連結',

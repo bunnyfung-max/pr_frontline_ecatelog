@@ -186,6 +186,16 @@ test('content type enforces file formats and non-image single asset', () => {
     schemas.content.safeParse({ ...c, type: 'pdf', files: ['asset:a.pdf', 'asset:b.pdf'] }).success,
     false,
   );
+  assert.equal(
+    schemas.content
+      .safeParse({
+        ...c,
+        type: 'image',
+        files: ['asset:photo.jpg', 'asset:clip.mp4', 'asset:brochure.pdf'],
+      })
+      .success,
+    true,
+  );
 });
 test('folderHasBrowseableContent checks published descendants and active scenes', () => {
   const data = initialCatalog(true);
