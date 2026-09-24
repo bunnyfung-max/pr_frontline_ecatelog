@@ -480,10 +480,37 @@ img {
   background: #3b82f6;
 }
 .feedback-status-solved::before {
-  background: #22c55e;
+  background: #7cb88a;
 }
 .feedback-status-future_plan::before {
-  background: #a855f7;
+  background: #b39ad6;
+}
+.feedback-table-row-solved,
+.feedback-table-row-future {
+  background: #f4f5f1;
+  color: #8a9184;
+}
+.feedback-table-row-solved td,
+.feedback-table-row-future td {
+  border-bottom-color: #e8ebe4;
+}
+.feedback-table-row-solved strong,
+.feedback-table-row-future strong {
+  color: #7a8276;
+  font-weight: 500;
+}
+.feedback-table-row-solved .feedback-table-desc,
+.feedback-table-row-future .feedback-table-desc {
+  color: #9aa196;
+}
+.feedback-table-row-solved .feedback-status,
+.feedback-table-row-future .feedback-status {
+  color: #8a9184;
+}
+.feedback-table-row-solved .feedback-table-attachments a,
+.feedback-table-row-future .feedback-table-attachments a {
+  opacity: 0.72;
+  border-color: #dde2d8;
 }
 .feedback-status-select {
   min-width: 120px;

@@ -139,8 +139,16 @@ export function FeedbackAdmin() {
               </tr>
             </thead>
             <tbody>
-              {items.map((item) => (
-                <tr key={item.id}>
+              {items.map((item) => {
+                const status = item.status || 'open';
+                const rowClass =
+                  status === 'solved'
+                    ? 'feedback-table-row-solved'
+                    : status === 'future_plan'
+                      ? 'feedback-table-row-future'
+                      : undefined;
+                return (
+                <tr key={item.id} className={rowClass}>
                   <td>{formatWhen(item.createdAt)}</td>
                   <td>{item.name}</td>
                   <td>{item.email || '—'}</td>
@@ -173,7 +181,8 @@ export function FeedbackAdmin() {
                     )}
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>

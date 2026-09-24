@@ -25,9 +25,9 @@ export const FEEDBACK_PRIORITY_LABELS: Record<FeedbackPriority, string> = {
 };
 
 export const FEEDBACK_STATUS_LABELS: Record<FeedbackStatus, string> = {
-  open: 'Open',
-  solved: 'Solved',
-  future_plan: 'Future Plan',
+  open: '待處理',
+  solved: '已解決',
+  future_plan: '日後計劃',
 };
 
 export function canUpdateFeedbackStatus(
