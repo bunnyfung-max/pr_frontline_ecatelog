@@ -1,7 +1,9 @@
 import { api } from '@/lib/client';
+import { compressImageForUpload } from '@/lib/image-compress';
+import { isImageMime, type ImageMime } from '@/lib/upload-policy';
 import { createBrowserSupabase } from '@/lib/supabase-browser';
 import type { PrepareUploadResult } from '../types';
-import { validateUploadFile } from '../validate-client';
+import { resolveUploadMime, validateUploadFile } from '../validate-client';
 
 async function uploadToTarget(file: File, prepared: PrepareUploadResult) {
   const target = prepared.upload;
@@ -31,13 +33,18 @@ async function uploadToTarget(file: File, prepared: PrepareUploadResult) {
 }
 
 export async function uploadCatalogAsset(file: File): Promise<string> {
-  const mime = await validateUploadFile(file);
+  const resolved = resolveUploadMime(file);
+  const uploadFile =
+    resolved && isImageMime(resolved)
+      ? await compressImageForUpload(file, resolved as ImageMime)
+      : file;
+  const mime = await validateUploadFile(uploadFile);
   const prepared = await api<PrepareUploadResult>('/api/storage/prepare', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name: file.name, size: file.size, mime }),
+    body: JSON.stringify({ name: uploadFile.name, size: uploadFile.size, mime }),
   });
-  await uploadToTarget(file, prepared);
+  await uploadToTarget(uploadFile, prepared);
   const completed = await api<{ ref: string }>('/api/storage/complete', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
