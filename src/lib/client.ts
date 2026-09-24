@@ -1,7 +1,7 @@
 import type { FeedbackSubmission } from './feedback';
 import type { Entity } from './types';
 import { MAX_FEEDBACK_IMAGE_BYTES } from './feedback';
-import { MAX_UPLOAD_BYTES } from './upload-policy';
+import { uploadCatalogAsset } from './storage/client/upload';
 export async function api<T>(url: string, options?: RequestInit): Promise<T> {
   const response = await fetch(url, { ...options, cache: 'no-store' });
   const text = await response.text();
@@ -39,10 +39,7 @@ export function remove(entity: Entity, id: string, options?: { cascade?: boolean
 export const assetUrl = (ref: string) =>
   ref.startsWith('asset:') ? `/api/asset?ref=${encodeURIComponent(ref)}` : ref;
 export async function upload(file: File): Promise<string> {
-  if (file.size > MAX_UPLOAD_BYTES) throw new Error('每個檔案不可超過 50 MB。');
-  const form = new FormData();
-  form.append('file', file);
-  return (await api<{ ref: string }>('/api/upload', { method: 'POST', body: form })).ref;
+  return uploadCatalogAsset(file);
 }
 export const feedbackAssetUrl = (ref: string) =>
   ref.startsWith('feedback:')

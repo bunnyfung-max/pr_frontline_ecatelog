@@ -64,7 +64,7 @@ Weekly Summary 不包含，Weekly Eposter 保留。六個場景名称已建立�
 
 業務需求、User Flow 及安全要求見 [docs/IT-REQUIREMENTS.md](docs/IT-REQUIREMENTS.md)。
 
-Storage `catalog` bucket 為 private，每檔上限 50 MB。雲端素材直接上載到 Supabase，不經 Vercel request body；格式白名單及大小在伺服器與 bucket 同時限制。SVG、HTML 不接受上載。少量 repo-native `/demo/*.svg` 僅用於示意。
+Storage `catalog` bucket 為 private，每檔上限 50 MB。瀏覽器經 `/api/storage/prepare` 取得上載目標後直傳 Supabase（不經 Vercel request body）；`STORAGE_PROVIDER` 可日後切換至 S3。格式白名單及大小在客戶端、伺服器與 bucket 同時限制。SVG、HTML 不接受上載。少量 repo-native `/demo/*.svg` 僅用於示意。
 
 檔案以新名稱上載，不覆寫舊檔，避免替換失敗造成資料遺失。取消上載／替換後的無引用檔案會保留，須由管理員確認後清理；不含自動 GC。私人素材 signed URL 有效 120 秒，已簽出的 URL 不會因下架即時撤銷。前端有權取閱者仍可能儲存／截圖，這不是 DRM。
 

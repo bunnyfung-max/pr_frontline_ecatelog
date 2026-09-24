@@ -1,9 +1,6 @@
-import { readFile } from 'node:fs/promises';
-import path from 'node:path';
 import {
   requireSession,
   readCatalog,
-  dataDirectory,
   demoEnabled,
   supabase,
   failure,
@@ -14,6 +11,9 @@ import { isCmsUnlocked } from '@/lib/cms-access';
 import { assetRef } from '@/lib/validation';
 import { validateUploadBytes } from '@/lib/upload-validation';
 import { mimeFromExtension } from '@/lib/upload-policy';
+import { objectKeyFromRef } from '@/lib/storage/refs';
+import { getStorageProvider } from '@/lib/storage/server';
+import { readLocalAssetBytes } from '@/lib/storage/server/providers/local';
 
 export async function GET(request: Request) {
   try {
@@ -26,19 +26,16 @@ export async function GET(request: Request) {
     const allowed = allowedAssetRefs(raw, cmsUnlocked);
     if (!allowed.includes(ref)) throw new HttpError(404, '檔案不存在或尚未發布。');
     if (!catalogAssetRefs(raw).includes(ref)) throw new HttpError(404, '檔案不存在或尚未發布。');
-    const file = ref.slice(6);
-    if (demoEnabled()) {
-      if (!/^[\w-]+\.(jpg|jpeg|png|webp|pdf|mp4|webm)$/.test(file) && !/^[\w-]+\/[\w-]+\.(jpg|jpeg|png|webp|pdf|mp4|webm)$/.test(file))
+    const objectKey = objectKeyFromRef(ref);
+    if (demoEnabled() || getStorageProvider().name === 'local') {
+      if (
+        !/^[\w-]+\.(jpg|jpeg|png|webp|pdf|mp4|webm)$/.test(objectKey) &&
+        !/^[\w-]+\/[\w-]+\.(jpg|jpeg|png|webp|pdf|mp4|webm)$/.test(objectKey)
+      )
         throw new HttpError(404, '找不到檔案。');
-      let bytes: Buffer;
-      try {
-        bytes = await readFile(path.join(dataDirectory(), 'uploads', file));
-      } catch {
-        throw new HttpError(404, '找不到檔案。');
-      }
-      const mime = mimeFromExtension(file.split('.').pop()!);
-      if (!mime || !validateUploadBytes(bytes, mime))
-        throw new HttpError(404, '找不到檔案。');
+      const bytes = await readLocalAssetBytes(objectKey);
+      const mime = mimeFromExtension(objectKey.split('.').pop()!);
+      if (!mime || !validateUploadBytes(bytes, mime)) throw new HttpError(404, '找不到檔案。');
       return new Response(new Uint8Array(bytes), {
         headers: {
           'Content-Type': mime,
@@ -46,12 +43,12 @@ export async function GET(request: Request) {
         },
       });
     }
+    const provider = getStorageProvider();
     const sb = await supabase();
-    const { data: signed, error } = await sb.storage.from('catalog').createSignedUrl(file, 120);
-    if (error || !signed) throw new HttpError(404, '檔案不存在或無法讀取。');
+    const signedUrl = await provider.getReadUrl(objectKey, 120, sb);
     return new Response(null, {
       status: 307,
-      headers: { Location: signed.signedUrl, 'Cache-Control': 'private, no-store' },
+      headers: { Location: signedUrl, 'Cache-Control': 'private, no-store' },
     });
   } catch (e) {
     return failure(e);
