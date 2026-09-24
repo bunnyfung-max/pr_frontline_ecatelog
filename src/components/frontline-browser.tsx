@@ -30,6 +30,7 @@ import {
 import { useEnrichedProductLabels } from '@/hooks/use-enriched-product-labels';
 import type { SearchCategory } from '@/lib/catalog-search';
 import { ContentThumb } from './content-thumb';
+import { preloadPdfJs } from '@/lib/pdfjs-preload';
 
 export function FrontlineBrowser({
   data,
@@ -223,7 +224,13 @@ export function FrontlineBrowser({
           const products = productLabelMap.get(c.id) ?? [];
           const visibleReasons = filterSearchMatchReasons(reasons, products);
           return (
-          <button className="search-content-entry" key={c.id} onClick={() => open(c)}>
+          <button
+            className="search-content-entry"
+            key={c.id}
+            onMouseEnter={preloadPdfJs}
+            onFocus={preloadPdfJs}
+            onClick={() => open(c)}
+          >
             <div className="search-thumbnail">
               <ContentThumb content={c} />
             </div>

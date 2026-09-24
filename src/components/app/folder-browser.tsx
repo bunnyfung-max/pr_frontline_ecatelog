@@ -23,6 +23,7 @@ import { useContentDelete } from '@/hooks/use-content-delete';
 import { useEnrichedProductLabels } from '@/hooks/use-enriched-product-labels';
 import { Empty } from '../ui';
 import { ContentThumb } from '../content-thumb';
+import { preloadPdfJs } from '@/lib/pdfjs-preload';
 import { CmsFolderCard } from '../cms-folder-card';
 import { ContentDeleteConfirm } from './content-delete-confirm';
 import { FolderDeleteConfirm } from './folder-delete-confirm';
@@ -341,6 +342,8 @@ export function FolderBrowser({
                     <button
                       key={c.id}
                       className="content-card"
+                      onMouseEnter={preloadPdfJs}
+                      onFocus={preloadPdfJs}
                       onClick={() => navigate(folder.id, cms, c.id)}
                     >
                       <div className="content-image">

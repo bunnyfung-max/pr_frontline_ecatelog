@@ -92,22 +92,23 @@ export function readerAssets(content: Content): ReaderAsset[] {
 export interface ReaderLeaf extends ReaderAsset {
   pdfPage?: number;
   failed?: boolean;
+  pending?: boolean;
 }
 // A PDF expands in place, never after later images/videos. Failed PDFs keep their position.
 export function readerLeaves(
   assets: ReaderAsset[],
   pdfCounts: Record<string, number>,
 ): ReaderLeaf[] {
-  return assets.flatMap((asset) =>
-    asset.kind !== 'pdf'
-      ? [asset]
-      : pdfCounts[asset.ref]
-        ? Array.from({ length: pdfCounts[asset.ref] }, (_, i) => ({ ...asset, pdfPage: i + 1 }))
-        : [{ ...asset, failed: true }],
-  );
+  return assets.flatMap((asset) => {
+    if (asset.kind !== 'pdf') return [asset];
+    const count = pdfCounts[asset.ref];
+    if (count === undefined) return [{ ...asset, pending: true }];
+    if (count <= 0) return [{ ...asset, failed: true }];
+    return Array.from({ length: count }, (_, i) => ({ ...asset, pdfPage: i + 1 }));
+  });
 }
 const pairable = (page?: ReaderLeaf) =>
-  page && !page.failed && (page.kind === 'image' || page.kind === 'pdf');
+  page && !page.failed && !page.pending && (page.kind === 'image' || page.kind === 'pdf');
 export function readerSpread(leaves: ReaderLeaf[], current: number, landscape: boolean): number[] {
   if (!leaves.length) return [];
   const page = Math.max(1, Math.min(current, leaves.length));

@@ -3,7 +3,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ShoppingBag } from 'lucide-react';
 import type { Content, EshopProductLink, Product } from '@/lib/types';
-import { api } from '@/lib/client';
+import {
+  fetchLiveEshopProducts,
+  toLiveEshopProduct,
+  type LiveEshopProduct,
+} from '@/lib/eshop-product-client';
 import { External, Thumb } from './ui';
 
 function safeLink(value?: string) {
@@ -15,13 +19,46 @@ function safeLink(value?: string) {
   }
 }
 
-type LiveEshopProduct = EshopProductLink & {
-  price: number | null;
-  priceLabel: string;
-  basePrice: number | null;
-  specialPrice: number | null;
-  available: boolean;
+export type EshopProductPrices = {
+  live: LiveEshopProduct[];
+  loading: boolean;
 };
+
+/** Fetch live eShop prices when enabled; otherwise show saved catalog snapshots. */
+export function useEshopProductPrices(
+  products: EshopProductLink[],
+  enabled = true,
+): EshopProductPrices {
+  const urls = useMemo(() => products.map((product) => product.url).join('\0'), [products]);
+  const [live, setLive] = useState<LiveEshopProduct[]>(() => products.map(toLiveEshopProduct));
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    setLive(products.map(toLiveEshopProduct));
+    if (!products.length || !enabled) {
+      setLoading(false);
+      return;
+    }
+    let active = true;
+    setLoading(true);
+    void fetchLiveEshopProducts(products)
+      .then((next) => {
+        if (active) setLive(next);
+      })
+      .catch(() => {
+        if (!active) return;
+        setLive(products.map(toLiveEshopProduct));
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [urls, products, enabled]);
+
+  return { live, loading };
+}
 
 export function PurchaseLinks({ storeUrl, eshopUrl }: { storeUrl?: string; eshopUrl?: string }) {
   const store = safeLink(storeUrl);
@@ -53,99 +90,6 @@ export function StorePurchaseLink({ storeUrl }: { storeUrl?: string }) {
       </External>
     </div>
   );
-}
-
-function toLiveProduct(product: EshopProductLink): LiveEshopProduct {
-  return {
-    ...product,
-    price: null,
-    priceLabel: '',
-    basePrice: null,
-    specialPrice: null,
-    available: true,
-  };
-}
-
-export type EshopProductPrices = {
-  live: LiveEshopProduct[];
-  loading: boolean;
-};
-
-async function fetchEshopProductPrices(
-  products: EshopProductLink[],
-): Promise<LiveEshopProduct[]> {
-  if (!products.length) return [];
-  const params = new URLSearchParams();
-  for (const product of products) params.append('url', product.url);
-  const response = await api<{ products: LiveEshopProduct[] }>(
-    `/api/eshop-product?${params.toString()}`,
-  );
-  const byUrl = new Map(response.products.map((item) => [item.url, item]));
-  return products.map((product) => {
-    const current = byUrl.get(product.url);
-    if (!current) {
-      return {
-        ...product,
-        price: null,
-        priceLabel: '',
-        basePrice: null,
-        specialPrice: null,
-        available: false,
-      };
-    }
-    return {
-      ...product,
-      title: current.title || product.title,
-      brand: current.brand || product.brand,
-      sku: current.sku || product.sku,
-      image: current.image || product.image,
-      price: current.price,
-      priceLabel: current.priceLabel,
-      basePrice: current.basePrice,
-      specialPrice: current.specialPrice,
-      available: current.available,
-    };
-  });
-}
-
-/** Prefetch live eShop prices as soon as the viewer opens. */
-export function useEshopProductPrices(products: EshopProductLink[]): EshopProductPrices {
-  const urls = useMemo(() => products.map((product) => product.url).join('\0'), [products]);
-  const [live, setLive] = useState<LiveEshopProduct[]>(() => products.map(toLiveProduct));
-  const [loading, setLoading] = useState(products.length > 0);
-  useEffect(() => {
-    if (!products.length) {
-      setLoading(false);
-      return;
-    }
-    let active = true;
-    setLive(products.map(toLiveProduct));
-    setLoading(true);
-    void fetchEshopProductPrices(products)
-      .then((next) => {
-        if (active) setLive(next);
-      })
-      .catch(() => {
-        if (!active) return;
-        setLive(
-          products.map((product) => ({
-            ...product,
-            price: null,
-            priceLabel: '',
-            basePrice: null,
-            specialPrice: null,
-            available: true,
-          })),
-        );
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [urls, products]);
-  return { live, loading };
 }
 
 function EshopProductCards({

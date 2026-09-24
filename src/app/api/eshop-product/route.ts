@@ -1,6 +1,7 @@
 import { failure, HttpError, json, readJsonBody, requireSession } from '@/lib/server';
 import { requireCmsAccess } from '@/lib/cms-access';
-import { fetchPriceriteProduct, formatHkd } from '@/lib/pricerite-eshop';
+import { formatHkd } from '@/lib/pricerite-eshop';
+import { fetchPriceriteProductCached } from '@/lib/pricerite-eshop-cache';
 import type { EshopProductSnapshot } from '@/lib/pricerite-eshop';
 import { isPriceriteProductUrl, normalizePriceriteProductUrl } from '@/lib/pricerite-eshop-url';
 
@@ -29,9 +30,9 @@ function toLiveSnapshot(snapshot: EshopProductSnapshot) {
   };
 }
 
-async function loadSnapshot(url: string) {
+async function loadSnapshot(url: string, fresh = false) {
   try {
-    return toLiveSnapshot(await fetchPriceriteProduct(url));
+    return toLiveSnapshot(await fetchPriceriteProductCached(url, { fresh }));
   } catch {
     return toLiveSnapshot(emptySnapshot(url));
   }
@@ -69,7 +70,7 @@ export async function POST(request: Request) {
     } catch {
       throw new HttpError(400, '只接受 Pricerite eShop 產品 HTTPS 連結。');
     }
-    const snapshot = await loadSnapshot(url);
+    const snapshot = await loadSnapshot(url, true);
     if (!snapshot.available || !snapshot.title)
       throw new HttpError(404, '找不到此產品，可能已下架或連結不正確。');
     return json({

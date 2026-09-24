@@ -19,7 +19,10 @@ function useAssetCacheScope(contents: Content[], syncScope: CacheSyncScope = 'fo
   const [status, setStatus] = useState<ContentCacheStatus>('checking');
   const [progress, setProgress] = useState({ done: 0, total: 0, phase: 'download' as 'remove' | 'download' });
   const [blobUrls, setBlobUrls] = useState<Record<string, string>>({});
+  const [cacheReady, setCacheReady] = useState(false);
   const urlsRef = useRef<string[]>([]);
+  const blobUrlsRef = useRef(blobUrls);
+  blobUrlsRef.current = blobUrls;
 
   const revokeUrls = useCallback(() => {
     for (const url of urlsRef.current) URL.revokeObjectURL(url);
@@ -27,31 +30,35 @@ function useAssetCacheScope(contents: Content[], syncScope: CacheSyncScope = 'fo
   }, []);
 
   const hydrateFromCache = useCallback(async () => {
+    setCacheReady(false);
     if (!refs.length) {
       revokeUrls();
       setBlobUrls({});
       setStatus('ready');
       setProgress({ done: 0, total: 0, phase: 'download' });
+      setCacheReady(true);
       return;
     }
     setStatus('checking');
+    const entries = await Promise.all(
+      refs.map(async (ref) => ({ ref, blob: await getCachedAsset(ref) })),
+    );
     const nextUrls: Record<string, string> = {};
     const created: string[] = [];
     let cached = 0;
-    for (const ref of refs) {
-      const blob = await getCachedAsset(ref);
-      if (blob) {
-        const url = URL.createObjectURL(blob);
-        nextUrls[ref] = url;
-        created.push(url);
-        cached += 1;
-      }
+    for (const { ref, blob } of entries) {
+      if (!blob) continue;
+      const url = URL.createObjectURL(blob);
+      nextUrls[ref] = url;
+      created.push(url);
+      cached += 1;
     }
     revokeUrls();
     urlsRef.current = created;
     setBlobUrls(nextUrls);
     setProgress({ done: cached, total: refs.length, phase: 'download' });
     setStatus(cached === 0 ? 'none' : cached === refs.length ? 'ready' : 'partial');
+    setCacheReady(true);
   }, [refs, revokeUrls]);
 
   useEffect(() => {
@@ -59,10 +66,7 @@ function useAssetCacheScope(contents: Content[], syncScope: CacheSyncScope = 'fo
     return () => revokeUrls();
   }, [scopeKey, hydrateFromCache, revokeUrls]);
 
-  const resolveAssetUrl = useCallback(
-    (ref: string) => blobUrls[ref] ?? assetUrl(ref),
-    [blobUrls],
-  );
+  const resolveAssetUrl = useCallback((ref: string) => blobUrlsRef.current[ref] ?? assetUrl(ref), []);
 
   const download = useCallback(async () => {
     if (!refs.length || status === 'downloading') return;
@@ -80,6 +84,7 @@ function useAssetCacheScope(contents: Content[], syncScope: CacheSyncScope = 'fo
     resolveAssetUrl,
     download,
     hasAssets: refs.length > 0,
+    cacheReady,
   };
 }
 

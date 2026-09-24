@@ -23,8 +23,9 @@ import {
 } from '@/lib/sales-kit';
 import { useContentAssetCache } from '@/hooks/use-content-cache';
 import { usePinchZoom } from '@/hooks/use-pinch-zoom';
+import { preloadPdfJs } from '@/lib/pdfjs-preload';
 import { External, Thumb } from './ui';
-import { ContentShoppingLinks, useEshopProductPrices } from './shopping-links';
+import { ContentShoppingLinks } from './shopping-links';
 import { EshopQrCode } from './eshop-qr-code';
 export function Viewer({
   content,
@@ -41,7 +42,7 @@ export function Viewer({
   const [page, setPage] = useState(1);
   const [panel, setPanel] = useState(false);
   const [pdfs, setPdfs] = useState<Record<string, PDFDocumentProxy>>({});
-  const [pdfReady, setPdfReady] = useState(false);
+  const [pdfCounts, setPdfCounts] = useState<Record<string, number>>({});
   const [reload, setReload] = useState(0);
   const [mounted, setMounted] = useState(false);
   const closeRef = useRef(close);
@@ -50,8 +51,11 @@ export function Viewer({
     () => readerAssets(content),
     [content.files, content.type, content.salesKit],
   );
-  const eshopPrices = useEshopProductPrices(content.eshopProducts ?? []);
-  const { resolveAssetUrl } = useContentAssetCache(content);
+  const { resolveAssetUrl, cacheReady } = useContentAssetCache(content);
+  const pdfRefs = useMemo(
+    () => [...new Set(assets.filter((asset) => asset.kind === 'pdf').map((asset) => asset.ref))],
+    [assets],
+  );
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -76,61 +80,47 @@ export function Viewer({
     setPage(1);
   }, [assets]);
   useEffect(() => {
+    if (!cacheReady) return;
     let cancelled = false;
     const tasks: ReturnType<(typeof import('pdfjs-dist'))['getDocument']>[] = [];
     setPdfs({});
-    setPdfReady(false);
-    const refs = [...new Set(assets.filter((a) => a.kind === 'pdf').map((a) => a.ref))];
-    if (!refs.length) {
-      setPdfReady(true);
-      return;
-    }
+    setPdfCounts({});
+    if (!pdfRefs.length) return;
     void (async () => {
-      const loaded: Record<string, PDFDocumentProxy> = {};
       try {
         const lib = await import('pdfjs-dist');
         if (cancelled) return;
         lib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
-        await Promise.all(
-          refs.map(async (ref) => {
-            try {
-              const task = lib.getDocument({ url: resolveAssetUrl(ref) });
-              tasks.push(task);
-              loaded[ref] = await task.promise;
-            } catch {
-              /* Keep a failed attachment in sequence; later files remain accessible. */
-            }
-          }),
-        );
-      } finally {
-        if (!cancelled) {
-          setPdfs(loaded);
-          setPdfReady(true);
+        for (const ref of pdfRefs) {
+          if (cancelled) break;
+          try {
+            const task = lib.getDocument({ url: resolveAssetUrl(ref) });
+            tasks.push(task);
+            const doc = await task.promise;
+            if (cancelled) return;
+            setPdfs((current) => ({ ...current, [ref]: doc }));
+            setPdfCounts((current) => ({ ...current, [ref]: doc.numPages }));
+          } catch {
+            if (!cancelled) setPdfCounts((current) => ({ ...current, [ref]: 0 }));
+          }
         }
+      } catch {
+        /* A worker/import failure is shown at each PDF's position. */
       }
-    })().catch(() => {
-      /* A worker/import failure is shown at each PDF's position. */
-    });
+    })();
     return () => {
       cancelled = true;
       tasks.forEach((task) => {
         void task.destroy().catch(() => {});
       });
     };
-  }, [assets, reload, resolveAssetUrl]);
+  }, [assets, reload, cacheReady, pdfRefs, resolveAssetUrl]);
   const horizontal = previewOrientation ? previewOrientation === 'landscape' : landscape;
-  const leaves = useMemo(
-    () =>
-      readerLeaves(
-        assets,
-        Object.fromEntries(Object.entries(pdfs).map(([ref, doc]) => [ref, doc.numPages])),
-      ),
-    [assets, pdfs],
-  );
+  const leaves = useMemo(() => readerLeaves(assets, pdfCounts), [assets, pdfCounts]);
   const total = leaves.length;
   const pages = readerSpread(leaves, page, horizontal);
   const current = leaves[pages[0] - 1];
-  const loading = assets.some((asset) => asset.kind === 'pdf') && !pdfReady;
+  const pageLoading = Boolean(current?.pending);
   const { scale, targetRef: pinchRef } = usePinchZoom(page);
   const navigate = (next: number) => {
     setPage(next);
@@ -177,11 +167,7 @@ export function Viewer({
       <div className="viewer-body">
         <section className="reader-area" aria-label="展示內容">
           <div className="reader-scroll reader-pinch" ref={pinchRef}>
-            {loading ? (
-              <div className="loading" role="status">
-                正在載入 PDF 頁次…
-              </div>
-            ) : current && current.kind !== 'link' ? (
+            {current && current.kind !== 'link' ? (
               <div
                 className={`page-spread-host${scale > 1 ? ' is-zoomed' : ''}`}
                 style={scale > 1 ? { width: `${scale * 100}%`, minWidth: '100%' } : undefined}
@@ -231,18 +217,18 @@ export function Viewer({
               <button
                 className="icon-btn"
                 aria-label="上一頁"
-                disabled={page <= 1 || loading}
+                disabled={page <= 1 || pageLoading}
                 onClick={() => navigate(previousReaderPage(leaves, page, horizontal))}
               >
                 <ChevronLeft size={18} />
               </button>
               <span aria-live="polite">
-                {loading ? '載入中' : `${pages.join('–') || '0'} / ${total}`}
+                {pageLoading ? '載入中' : `${pages.join('–') || '0'} / ${total}`}
               </span>
               <button
                 className="icon-btn"
                 aria-label="下一頁"
-                disabled={!total || pages.at(-1)! >= total || loading}
+                disabled={!total || pages.at(-1)! >= total || pageLoading}
                 onClick={() => navigate(Math.min(total, pages.at(-1)! + 1))}
               >
                 <ChevronRight size={18} />
@@ -265,11 +251,7 @@ export function Viewer({
                 <X size={21} />
               </button>
             </div>
-            <ContentShoppingLinks
-              content={content}
-              products={data.products}
-              eshopPrices={eshopPrices}
-            />
+            <ContentShoppingLinks content={content} products={data.products} />
             <div className="list-title">
               <h3>eShop Bundle Offer</h3>
               <span>組合推介</span>
@@ -335,6 +317,13 @@ function ReaderPageMedia({
   useEffect(() => {
     setFailed(false);
   }, [leaf.ref, leaf.kind, reload]);
+  if (leaf.pending) {
+    return (
+      <div className="loading" role="status">
+        正在載入 PDF…
+      </div>
+    );
+  }
   if (leaf.failed || (leaf.kind === 'pdf' && !pdf)) {
     return (
       <div className="reader-page-error">

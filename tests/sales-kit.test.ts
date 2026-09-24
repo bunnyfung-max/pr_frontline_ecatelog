@@ -161,10 +161,20 @@ test('landscape pairs image/PDF pages, video stands alone, next/back never skips
   assert.deepEqual(readerSpread([], 1, true), []);
 });
 
-test('failed PDF keeps its position without blocking access to later attachments', () => {
+test('pending PDF keeps later attachments reachable while counts are still loading', () => {
   const leaves = readerLeaves(
     readerAssets({ ...kit, files: [...images, 'asset:bad.pdf', 'asset:tail.png'] }),
     {},
+  );
+  assert.equal(leaves[4].pending, true);
+  assert.deepEqual(readerSpread(leaves, 5, true), [5]);
+  assert.equal(leaves[5].ref, 'asset:tail.png');
+});
+
+test('failed PDF keeps its position without blocking access to later attachments', () => {
+  const leaves = readerLeaves(
+    readerAssets({ ...kit, files: [...images, 'asset:bad.pdf', 'asset:tail.png'] }),
+    { 'asset:bad.pdf': 0 },
   );
   assert.equal(leaves[4].failed, true);
   assert.deepEqual(readerSpread(leaves, 5, true), [5]);
