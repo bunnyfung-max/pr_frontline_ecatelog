@@ -1745,6 +1745,71 @@ textarea {
   max-height: 100dvh;
   background: #e7e8e1;
   overflow: hidden;
+  animation: viewer-enter 0.16s ease-out;
+}
+@keyframes viewer-enter {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.loading-spinner {
+  width: 22px;
+  height: 22px;
+  border: 2px solid #d5d9cf;
+  border-top-color: #6f7a62;
+  border-radius: 50%;
+  animation: spin 0.75s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.reader-page-loading {
+  position: relative;
+  display: flex;
+  min-height: 280px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px;
+  color: var(--muted);
+  overflow: hidden;
+}
+.reader-page-loading > span:last-child {
+  position: relative;
+  z-index: 1;
+}
+.reader-hero-placeholder {
+  position: absolute;
+  inset: 0;
+}
+.reader-hero-placeholder img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: blur(14px) saturate(0.92);
+  opacity: 0.5;
+  transform: scale(1.06);
+}
+.reader-paper-skeleton {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, #eceee7 8%, #f7f8f4 18%, #eceee7 33%);
+  background-size: 200% 100%;
+  animation: shimmer 1.2s linear infinite;
+}
+@keyframes shimmer {
+  to {
+    background-position-x: -200%;
+  }
+}
+.paper.is-loading {
+  overflow: hidden;
 }
 .page-spread-host {
   display: flex;
@@ -1928,6 +1993,17 @@ textarea {
   width: 100%;
   height: auto;
   object-fit: contain;
+}
+.paper img.reader-media {
+  animation: media-enter 0.2s ease-out;
+}
+@keyframes media-enter {
+  from {
+    opacity: 0.35;
+  }
+  to {
+    opacity: 1;
+  }
 }
 .paper .reader-video {
   background: #161b15;

@@ -25,6 +25,7 @@ import { Modal, Thumb } from '../ui';
 import { Viewer } from '../viewer';
 import { SalesKitUpload } from '../sales-kit-upload';
 import { fileKind, kitFiles, kitComplete } from '@/lib/sales-kit';
+import { prefetchContent } from '@/lib/content-prefetch';
 import { makeId } from './utils';
 import { TagField } from './fields/tag-field';
 import { EshopProductField } from './fields/eshop-product-field';
@@ -116,6 +117,7 @@ export function ContentEditor({
       setError('請先上載檔案或填寫 URL。');
       return;
     }
+    prefetchContent({ ...value, id: content?.id ?? 'draft-preview' });
     setPreview(orientation);
   };
   return (

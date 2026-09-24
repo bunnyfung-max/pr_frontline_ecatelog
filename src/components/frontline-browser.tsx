@@ -30,7 +30,7 @@ import {
 import { useEnrichedProductLabels } from '@/hooks/use-enriched-product-labels';
 import type { SearchCategory } from '@/lib/catalog-search';
 import { ContentThumb } from './content-thumb';
-import { preloadPdfJs } from '@/lib/pdfjs-preload';
+import { prefetchContent } from '@/lib/content-prefetch';
 
 export function FrontlineBrowser({
   data,
@@ -227,8 +227,8 @@ export function FrontlineBrowser({
           <button
             className="search-content-entry"
             key={c.id}
-            onMouseEnter={preloadPdfJs}
-            onFocus={preloadPdfJs}
+            onMouseEnter={() => prefetchContent(c)}
+            onFocus={() => prefetchContent(c)}
             onClick={() => open(c)}
           >
             <div className="search-thumbnail">

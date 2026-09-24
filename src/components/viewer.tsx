@@ -12,7 +12,7 @@ import {
 import type { PDFDocumentProxy } from 'pdfjs-dist';
 import type { Catalog, Content } from '@/lib/types';
 import { activeOffer, byOrder } from '@/lib/catalog';
-import { contentReaderSubtitle } from '@/lib/content-display';
+import { contentPreviewRef, contentReaderSubtitle } from '@/lib/content-display';
 import {
   FILE_KIND_LABEL,
   readerAssets,
@@ -44,21 +44,24 @@ export function Viewer({
   const [pdfs, setPdfs] = useState<Record<string, PDFDocumentProxy>>({});
   const [pdfCounts, setPdfCounts] = useState<Record<string, number>>({});
   const [reload, setReload] = useState(0);
-  const [mounted, setMounted] = useState(false);
   const closeRef = useRef(close);
   closeRef.current = close;
   const assets = useMemo(
     () => readerAssets(content),
     [content.files, content.type, content.salesKit],
   );
-  const { resolveAssetUrl, cacheReady } = useContentAssetCache(content);
-  const pdfRefs = useMemo(
-    () => [...new Set(assets.filter((asset) => asset.kind === 'pdf').map((asset) => asset.ref))],
-    [assets],
-  );
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const { resolveAssetUrl } = useContentAssetCache(content);
+  const previewRef = useMemo(() => contentPreviewRef(content), [content]);
+  const pdfRefs = useMemo(() => {
+    const seen = new Set<string>();
+    const refs: string[] = [];
+    for (const asset of assets) {
+      if (asset.kind !== 'pdf' || seen.has(asset.ref)) continue;
+      seen.add(asset.ref);
+      refs.push(asset.ref);
+    }
+    return refs;
+  }, [assets]);
   useEffect(() => {
     const media = matchMedia('(orientation: landscape)');
     const update = () => setLandscape(media.matches);
@@ -80,7 +83,6 @@ export function Viewer({
     setPage(1);
   }, [assets]);
   useEffect(() => {
-    if (!cacheReady) return;
     let cancelled = false;
     const tasks: ReturnType<(typeof import('pdfjs-dist'))['getDocument']>[] = [];
     setPdfs({});
@@ -91,19 +93,20 @@ export function Viewer({
         const lib = await import('pdfjs-dist');
         if (cancelled) return;
         lib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
-        for (const ref of pdfRefs) {
-          if (cancelled) break;
-          try {
-            const task = lib.getDocument({ url: resolveAssetUrl(ref) });
-            tasks.push(task);
-            const doc = await task.promise;
-            if (cancelled) return;
-            setPdfs((current) => ({ ...current, [ref]: doc }));
-            setPdfCounts((current) => ({ ...current, [ref]: doc.numPages }));
-          } catch {
-            if (!cancelled) setPdfCounts((current) => ({ ...current, [ref]: 0 }));
-          }
-        }
+        await Promise.all(
+          pdfRefs.map(async (ref) => {
+            try {
+              const task = lib.getDocument({ url: resolveAssetUrl(ref) });
+              tasks.push(task);
+              const doc = await task.promise;
+              if (cancelled) return;
+              setPdfs((current) => ({ ...current, [ref]: doc }));
+              setPdfCounts((current) => ({ ...current, [ref]: doc.numPages }));
+            } catch {
+              if (!cancelled) setPdfCounts((current) => ({ ...current, [ref]: 0 }));
+            }
+          }),
+        );
       } catch {
         /* A worker/import failure is shown at each PDF's position. */
       }
@@ -114,7 +117,7 @@ export function Viewer({
         void task.destroy().catch(() => {});
       });
     };
-  }, [assets, reload, cacheReady, pdfRefs, resolveAssetUrl]);
+  }, [assets, reload, pdfRefs, resolveAssetUrl]);
   const horizontal = previewOrientation ? previewOrientation === 'landscape' : landscape;
   const leaves = useMemo(() => readerLeaves(assets, pdfCounts), [assets, pdfCounts]);
   const total = leaves.length;
@@ -177,7 +180,7 @@ export function Viewer({
                     const leaf = leaves[n - 1];
                     return (
                       <div
-                        className="paper"
+                        className={`paper${leaf.pending ? ' is-loading' : ''}`}
                         key={`${n}-${reload}`}
                         data-page={n}
                         data-file-kind={leaf.kind}
@@ -189,6 +192,7 @@ export function Viewer({
                           page={n}
                           pdf={leaf.kind === 'pdf' ? pdfs[leaf.ref] : undefined}
                           reload={reload}
+                          heroSrc={previewRef ? resolveAssetUrl(previewRef) : ''}
                           resolveAssetUrl={resolveAssetUrl}
                           onRetry={() => setReload((k) => k + 1)}
                         />
@@ -293,7 +297,7 @@ export function Viewer({
       </div>
     </div>
   );
-  if (!mounted) return null;
+  if (typeof document === 'undefined') return null;
   return createPortal(markup, document.body);
 }
 function ReaderPageMedia({
@@ -302,6 +306,7 @@ function ReaderPageMedia({
   page,
   pdf,
   reload,
+  heroSrc,
   resolveAssetUrl,
   onRetry,
 }: {
@@ -310,6 +315,7 @@ function ReaderPageMedia({
   page: number;
   pdf?: PDFDocumentProxy;
   reload: number;
+  heroSrc: string;
   resolveAssetUrl: (ref: string) => string;
   onRetry: () => void;
 }) {
@@ -319,8 +325,16 @@ function ReaderPageMedia({
   }, [leaf.ref, leaf.kind, reload]);
   if (leaf.pending) {
     return (
-      <div className="loading" role="status">
-        正在載入 PDF…
+      <div className="reader-page-loading" role="status">
+        {heroSrc ? (
+          <div className="reader-hero-placeholder" aria-hidden="true">
+            <img src={heroSrc} alt="" />
+          </div>
+        ) : (
+          <div className="reader-paper-skeleton" aria-hidden="true" />
+        )}
+        <span className="loading-spinner" aria-hidden="true" />
+        <span>正在載入 PDF…</span>
       </div>
     );
   }
@@ -368,8 +382,10 @@ function ReaderPageMedia({
   return (
     <img
       key={`${leaf.ref}-${reload}`}
+      className="reader-media"
       src={resolveAssetUrl(leaf.ref)}
       alt={`${contentName}，${leaf.label}，第 ${page} 頁`}
+      decoding="async"
       onError={() => setFailed(true)}
     />
   );

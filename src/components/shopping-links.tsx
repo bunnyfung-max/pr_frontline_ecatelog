@@ -102,7 +102,7 @@ function EshopProductCards({
     <>
       <div className="list-title">
         <h3>eShop 產品</h3>
-        <span>{loading ? '更新價格中…' : '即時價格'}</span>
+        <span>{loading ? '價格更新中…' : '即時價格'}</span>
       </div>
       {live.map((product) => {
         const url = safeLink(product.url);
@@ -125,7 +125,7 @@ function EshopProductCards({
               <small>{product.brand}</small>
               <div className="eshop-product-price-row">
                 {loading ? (
-                  <span className="eshop-product-price muted">讀取價格中…</span>
+                  <span className="eshop-product-price muted">價格更新中…</span>
                 ) : unavailable ? (
                   <span className="eshop-product-price muted">已下架或連結失效</span>
                 ) : product.priceLabel ? (

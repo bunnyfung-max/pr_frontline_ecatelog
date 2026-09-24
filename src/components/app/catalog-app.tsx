@@ -28,6 +28,7 @@ import {
   publishedContents,
 } from '@/lib/catalog';
 import { api } from '@/lib/client';
+import { prefetchContent } from '@/lib/content-prefetch';
 import { useCatalogSession } from '@/hooks/use-catalog-session';
 import { useCatalogData } from '@/hooks/use-catalog-data';
 import { FolderCacheButton } from '../folder-cache-button';
@@ -89,14 +90,19 @@ export function CatalogApp() {
   }, [contentParam]);
   const navigate = useCallback(
     (id: string, admin = cmsMode, content?: string) => {
+      if (content) {
+        setActiveContentId(content);
+        const item = data?.contents.find((entry) => entry.id === content);
+        if (item) prefetchContent(item);
+      }
       const p = new URLSearchParams();
       if (id) p.set('folder', id);
       if (admin) p.set('cms', '1');
       if (content) p.set('content', content);
       if (content && id === folderId && searchQuery) p.set('q', searchQuery);
-      router.push(`/?${p.toString()}`, { scroll: true });
+      router.push(`/?${p.toString()}`, { scroll: !content });
     },
-    [router, cmsMode, folderId, searchQuery],
+    [router, cmsMode, folderId, searchQuery, data?.contents],
   );
   const openFeedbackAdmin = () => {
     const p = new URLSearchParams();
