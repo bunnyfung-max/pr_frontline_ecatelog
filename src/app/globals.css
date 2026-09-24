@@ -2242,6 +2242,48 @@ textarea {
 .eshop-product-field {
   margin: 18px 0;
 }
+.eshop-product-bulk {
+  margin-top: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: #fafbf8;
+}
+.eshop-product-bulk > summary {
+  cursor: pointer;
+  padding: 12px 14px;
+  font-size: 13px;
+  color: #4f5a45;
+  list-style-position: inside;
+}
+.eshop-product-bulk-body {
+  display: grid;
+  gap: 12px;
+  padding: 0 14px 14px;
+}
+.eshop-product-bulk-body textarea {
+  width: 100%;
+  min-height: 132px;
+  resize: vertical;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.eshop-product-bulk-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.eshop-product-file-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.eshop-product-import-note {
+  margin: 10px 0 0;
+  font-size: 12px;
+  color: #5f6a55;
+}
 .eshop-product-input-row {
   display: flex;
   gap: 10px;
