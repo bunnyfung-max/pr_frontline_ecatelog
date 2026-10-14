@@ -418,6 +418,13 @@ img {
   display: flex;
   flex-direction: column;
 }
+.sidebar-scroll {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
 .sidebar .overline {
   padding: 0 14px;
   margin-bottom: 19px;
@@ -2730,11 +2737,17 @@ textarea {
   }
   .sidebar {
     width: 100%;
-    padding: 9px 12px;
-    flex-direction: row;
-    overflow: auto;
+    padding: 9px 12px 8px;
     border-bottom: 1px solid var(--line);
+    border-right: 0;
+    gap: 8px;
+  }
+  .sidebar-scroll {
+    flex: none;
+    flex-direction: row;
+    align-items: center;
     gap: 5px;
+    overflow-x: auto;
   }
   .sidebar .overline,
   .sidebar-note,
@@ -2743,9 +2756,8 @@ textarea {
   }
   .sidebar-footer {
     margin-top: 0;
-    margin-left: auto;
-    padding-top: 0;
-    border-top: 0;
+    padding-top: 8px;
+    border-top: 1px solid var(--line);
     flex-direction: row;
     gap: 5px;
   }

@@ -237,30 +237,32 @@ export function CatalogApp() {
       <div className="workspace">
         {cms && (
           <aside className="sidebar">
-            <p className="overline">{cms ? 'CONTENT WORKSPACE' : 'SELLING TOOLKIT'}</p>
-            <button
-              className={!folderId && !feedbackView ? 'nav-item active' : 'nav-item'}
-              onClick={() => navigate('')}
-            >
-              <Home size={19} />
-              {cms ? '管理總覽' : '工具首頁'}
-            </button>
-            <div className="nav-divider" />
-            {(data ? rootFolders(data) : []).map((f, i) => {
-              const Icon = rootIcons[i % rootIcons.length] || Folder;
-              const active =
-                !feedbackView && folderId && data && trail(data.folders, folderId)[0]?.id === f.id;
-              return (
-                <button
-                  key={f.id}
-                  className={`nav-item ${active ? 'active' : ''}`}
-                  onClick={() => navigate(f.id, true)}
-                >
-                  <Icon size={19} />
-                  {f.name}
-                </button>
-              );
-            })}
+            <div className="sidebar-scroll">
+              <p className="overline">{cms ? 'CONTENT WORKSPACE' : 'SELLING TOOLKIT'}</p>
+              <button
+                className={!folderId && !feedbackView ? 'nav-item active' : 'nav-item'}
+                onClick={() => navigate('')}
+              >
+                <Home size={19} />
+                {cms ? '管理總覽' : '工具首頁'}
+              </button>
+              <div className="nav-divider" />
+              {(data ? rootFolders(data) : []).map((f, i) => {
+                const Icon = rootIcons[i % rootIcons.length] || Folder;
+                const active =
+                  !feedbackView && folderId && data && trail(data.folders, folderId)[0]?.id === f.id;
+                return (
+                  <button
+                    key={f.id}
+                    className={`nav-item ${active ? 'active' : ''}`}
+                    onClick={() => navigate(f.id, true)}
+                  >
+                    <Icon size={19} />
+                    {f.name}
+                  </button>
+                );
+              })}
+            </div>
             <div className="sidebar-footer">
               {session.role === 'admin' && (
                 <button
