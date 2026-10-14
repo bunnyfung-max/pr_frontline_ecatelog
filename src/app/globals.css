@@ -2759,6 +2759,7 @@ textarea {
     padding-top: 8px;
     border-top: 1px solid var(--line);
     flex-direction: row;
+    flex-wrap: wrap;
     gap: 5px;
   }
   .nav-item {

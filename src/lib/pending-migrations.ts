@@ -9,6 +9,7 @@ const migrationFiles = [
   '005_feedback.sql',
   '007_feedback_reporter_email.sql',
   '008_feedback_status.sql',
+  '009_user_activity.sql',
 ] as const;
 
 let ensurePromise: Promise<string[]> | null = null;
@@ -41,9 +42,14 @@ async function applyPendingMigrations() {
       `;
       if (row?.exists) continue;
       const content = await readFile(join(process.cwd(), 'supabase/migrations', file), 'utf8');
-      await sql.unsafe(content);
-      await sql`insert into public.app_migrations (name) values (${file})`;
-      applied.push(file);
+      try {
+        await sql.unsafe(content);
+        await sql`insert into public.app_migrations (name) values (${file})`;
+        applied.push(file);
+      } catch (error) {
+        if (file !== '009_user_activity.sql') throw error;
+        await sql`rollback`.catch(() => undefined);
+      }
     }
 
     if (applied.length) await reloadPostgrestSchema(sql);

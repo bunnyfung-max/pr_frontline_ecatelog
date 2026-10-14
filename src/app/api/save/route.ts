@@ -11,12 +11,35 @@ import {
 import { requireCmsAccess } from '@/lib/cms-access';
 import { schemas } from '@/lib/validation';
 import { descendants, trail, folderDeleteBlockers, folderDeletionPlan } from '@/lib/catalog';
-import type { Entity } from '@/lib/types';
+import type { Catalog, Entity } from '@/lib/types';
+import { catalogItemExists, catalogItemName, incomingItemName } from '@/lib/user-activity';
+import { recordUserActivity } from '@/lib/user-activity-repository';
+
+async function recordChange(
+  email: string,
+  data: Catalog,
+  entity: Entity,
+  id: string,
+  action: 'create' | 'update' | 'delete',
+  targetName?: string,
+) {
+  try {
+    await recordUserActivity({
+      email,
+      action,
+      entity,
+      targetId: id,
+      targetName: targetName || catalogItemName(data, entity, id),
+    });
+  } catch {
+    // Catalog saves stay successful when the activity table is not ready yet.
+  }
+}
 
 export async function POST(request: Request) {
   try {
     assertSameOrigin(request);
-    await requireCmsAccess();
+    const session = await requireCmsAccess();
     const body = await readJsonBody<{
       action?: string;
       entity?: Entity;
@@ -40,13 +63,27 @@ export async function POST(request: Request) {
           throw new HttpError(400, `無法刪除：${blockers.join('、')}。請先清空後再試。`);
         if (body.cascade) {
           const plan = folderDeletionPlan(data, id);
-          for (const contentId of plan.contentIds) await deleteEntry('content', contentId);
-          for (const sceneId of plan.sceneIds) await deleteEntry('scene', sceneId);
-          for (const folderId of plan.folderIds) await deleteEntry('folder', folderId);
+          for (const contentId of plan.contentIds) {
+            const targetName = catalogItemName(data, 'content', contentId);
+            await deleteEntry('content', contentId);
+            await recordChange(session.email, data, 'content', contentId, 'delete', targetName);
+          }
+          for (const sceneId of plan.sceneIds) {
+            const targetName = catalogItemName(data, 'scene', sceneId);
+            await deleteEntry('scene', sceneId);
+            await recordChange(session.email, data, 'scene', sceneId, 'delete', targetName);
+          }
+          for (const folderId of plan.folderIds) {
+            const targetName = catalogItemName(data, 'folder', folderId);
+            await deleteEntry('folder', folderId);
+            await recordChange(session.email, data, 'folder', folderId, 'delete', targetName);
+          }
           return json({ ok: true });
         }
       }
+      const targetName = catalogItemName(data, entity, id);
       await deleteEntry(entity, id);
+      await recordChange(session.email, data, entity, id, 'delete', targetName);
       return json({ ok: true });
     }
 
@@ -94,7 +131,16 @@ export async function POST(request: Request) {
           throw new HttpError(400, '主目錄名稱已存在。');
       }
     }
+    const existed = catalogItemExists(data, entity, value.id);
     await saveEntry(entity, value, expectedVersion);
+    await recordChange(
+      session.email,
+      data,
+      entity,
+      value.id,
+      existed ? 'update' : 'create',
+      incomingItemName(entity, value),
+    );
     return json({ ok: true, value });
   } catch (e) {
     return failure(e);
