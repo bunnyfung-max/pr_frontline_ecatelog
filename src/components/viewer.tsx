@@ -328,8 +328,12 @@ function ReaderPageMedia({
   onRetry: () => void;
 }) {
   const [failed, setFailed] = useState(false);
+  const [imageReady, setImageReady] = useState(false);
+  const imageRef = useRef<HTMLImageElement>(null);
   useEffect(() => {
     setFailed(false);
+    const node = imageRef.current;
+    setImageReady(Boolean(node?.complete && node.naturalWidth > 0));
   }, [leaf.ref, leaf.kind, reload]);
   if (leaf.pending) {
     return (
@@ -388,14 +392,24 @@ function ReaderPageMedia({
     );
   }
   return (
-    <img
-      key={`${leaf.ref}-${reload}`}
-      className="reader-media"
-      src={resolveAssetUrl(leaf.ref)}
-      alt={`${contentName}，${leaf.label}，第 ${page} 頁`}
-      decoding="async"
-      onError={() => setFailed(true)}
-    />
+    <div className={`reader-image-frame${imageReady ? '' : ' is-loading'}`}>
+      {!imageReady && (
+        <div className="reader-page-loading" role="status">
+          <span className="loading-spinner" aria-hidden="true" />
+          <span>正在載入圖片…</span>
+        </div>
+      )}
+      <img
+        key={`${leaf.ref}-${reload}`}
+        ref={imageRef}
+        className={`reader-media${imageReady ? '' : ' is-pending'}`}
+        src={resolveAssetUrl(leaf.ref)}
+        alt={`${contentName}，${leaf.label}，第 ${page} 頁`}
+        decoding="async"
+        onLoad={() => setImageReady(true)}
+        onError={() => setFailed(true)}
+      />
+    </div>
   );
 }
 function PdfPage({ pdf, page }: { pdf: PDFDocumentProxy; page: number }) {
