@@ -16,6 +16,7 @@ import {
   verifyCmsPassword,
 } from '@/lib/cms-access';
 import { clientKey, rateLimit } from '@/lib/rate-limit';
+import { passwordUpdateErrorMessage, validatePasswordChange } from '@/lib/change-password';
 export async function GET() {
   if (!configured() && !demoEnabled()) return json({ setup: true });
   try {
@@ -28,13 +29,22 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     assertSameOrigin(request);
-    const { email, password, action } = await readJsonBody<{
+    const body = await readJsonBody<{
       email?: string;
       password?: string;
       action?: string;
+      currentPassword?: unknown;
+      newPassword?: unknown;
+      confirmPassword?: unknown;
     }>(request);
+    const { email, password, action } = body;
     const limitKey = `session:${action || 'login'}:${clientKey(request)}`;
-    const limit = action === 'unlock-cms' ? 8 : action === 'logout' || action === 'lock-cms' ? 60 : 20;
+    const limit =
+      action === 'unlock-cms' || action === 'change-password'
+        ? 8
+        : action === 'logout' || action === 'lock-cms'
+          ? 60
+          : 20;
     if (!rateLimit(limitKey, limit, 15 * 60 * 1000)) {
       throw new HttpError(429, '嘗試次數過多，請稍後再試。');
     }
@@ -49,6 +59,21 @@ export async function POST(request: Request) {
       await verifyCmsPassword(password, session);
       await setCmsUnlocked(session);
       return json({ cmsUnlocked: true, session });
+    }
+    if (action === 'change-password') {
+      const session = await requireSession();
+      if (session.demo) throw new HttpError(400, '示例模式無法更改密碼。');
+      if (!session.email) throw new HttpError(400, '此帳戶沒有可用的登入電郵。');
+      const passwords = validatePasswordChange(body);
+      const sb = await supabase();
+      const { error: signInError } = await sb.auth.signInWithPassword({
+        email: session.email,
+        password: passwords.currentPassword,
+      });
+      if (signInError) throw new HttpError(401, '現有密碼不正確。');
+      const { error: updateError } = await sb.auth.updateUser({ password: passwords.newPassword });
+      if (updateError) throw new HttpError(400, passwordUpdateErrorMessage(updateError.message));
+      return json({ ok: true });
     }
     const sb = await supabase();
     if (action === 'logout') {

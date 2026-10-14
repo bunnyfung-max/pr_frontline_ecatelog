@@ -17,6 +17,7 @@ import {
   LockKeyhole,
   RefreshCw,
   MessageSquare,
+  KeyRound,
 } from 'lucide-react';
 import type { Content, ManageKind, Folder as FolderType } from '@/lib/types';
 import {
@@ -45,6 +46,7 @@ import { FolderBrowser } from './folder-browser';
 import { FolderForm } from './folder-form';
 import { FeedbackForm } from './feedback-form';
 import { FeedbackFloatingButton } from './feedback-floating-button';
+import { ChangePasswordForm } from './change-password-form';
 
 export function CatalogApp() {
   const router = useRouter();
@@ -77,6 +79,7 @@ export function CatalogApp() {
   const [newFolder, setNewFolder] = useState(false);
   const [editFolder, setEditFolder] = useState<FolderType | null>(null);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [passwordOpen, setPasswordOpen] = useState(false);
   const [toast, setToast] = useState('');
   const cms = cmsMode && hasCmsAccess;
   const error = catalogError || sessionError;
@@ -258,8 +261,8 @@ export function CatalogApp() {
                 </button>
               );
             })}
-            {session.role === 'admin' && (
-              <div className="sidebar-footer">
+            <div className="sidebar-footer">
+              {session.role === 'admin' && (
                 <button
                   type="button"
                   className={`nav-item ${feedbackView ? 'active' : ''}`}
@@ -268,8 +271,12 @@ export function CatalogApp() {
                   <MessageSquare size={19} />
                   試用回饋
                 </button>
-              </div>
-            )}
+              )}
+              <button type="button" className="nav-item" onClick={() => setPasswordOpen(true)}>
+                <KeyRound size={19} />
+                更改密碼
+              </button>
+            </div>
           </aside>
         )}
         <main className="main">
@@ -460,8 +467,28 @@ export function CatalogApp() {
       {editFolder && (
         <FolderForm folder={editFolder} close={() => setEditFolder(null)} saved={saved} />
       )}
+      {!cms && !passwordOpen && (
+        <button
+          type="button"
+          className="password-corner"
+          onClick={() => setPasswordOpen(true)}
+        >
+          <KeyRound size={18} />
+          更改密碼
+        </button>
+      )}
       {!feedbackOpen && (
         <FeedbackFloatingButton onClick={() => setFeedbackOpen(true)} />
+      )}
+      {passwordOpen && (
+        <ChangePasswordForm
+          email={session.email}
+          close={() => setPasswordOpen(false)}
+          saved={() => {
+            setPasswordOpen(false);
+            setToast('密碼已更新。');
+          }}
+        />
       )}
       {feedbackOpen && (
         <FeedbackForm
