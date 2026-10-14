@@ -412,11 +412,19 @@ img {
 .sidebar {
   width: 213px;
   flex-shrink: 0;
+  align-self: flex-start;
+  position: sticky;
+  top: 0;
+  height: calc(100dvh - 60px);
   background: #fbfbf8;
   border-right: 1px solid var(--line);
   padding: 33px 19px;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+}
+.demo-strip + .workspace .sidebar {
+  height: calc(100dvh - 96px);
 }
 .sidebar-scroll {
   display: flex;
@@ -424,6 +432,7 @@ img {
   flex-direction: column;
   min-height: 0;
   min-width: 0;
+  overflow-y: auto;
 }
 .sidebar .overline {
   padding: 0 14px;
@@ -2716,11 +2725,17 @@ textarea {
     display: block;
   }
   .sidebar {
+    position: static;
     width: 100%;
+    height: auto;
     padding: 9px 12px 8px;
     border-bottom: 1px solid var(--line);
     border-right: 0;
     gap: 8px;
+    overflow: visible;
+  }
+  .demo-strip + .workspace .sidebar {
+    height: auto;
   }
   .sidebar-scroll {
     flex: none;
@@ -2735,9 +2750,16 @@ textarea {
     display: none;
   }
   .sidebar-footer {
+    position: fixed;
+    left: 12px;
+    bottom: max(12px, env(safe-area-inset-bottom, 0px));
+    z-index: 1200;
     margin-top: 0;
-    padding-top: 8px;
-    border-top: 1px solid var(--line);
+    padding: 8px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: #fbfbf8;
+    box-shadow: var(--shadow);
     flex-direction: row;
     flex-wrap: wrap;
     gap: 5px;
@@ -2754,7 +2776,7 @@ textarea {
   }
   .main {
     width: 100%;
-    padding: 16px 18px 0;
+    padding: 16px 18px 76px;
   }
   .breadcrumb {
     margin-bottom: 15px;
