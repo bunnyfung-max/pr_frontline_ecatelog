@@ -278,8 +278,7 @@ export function Viewer({
             </div>
             <ContentShoppingLinks content={content} products={data.products} />
             <div className="list-title">
-              <h3>eShop Bundle Offer</h3>
-              <span>組合推介</span>
+              <h3>eShop 組合優惠</h3>
             </div>
             {data.offers
               .filter((o) => activeOffer(o))
@@ -310,7 +309,7 @@ export function Viewer({
               </article>
             )}
             {!data.offers.some((o) => activeOffer(o)) && !content.eshopUrl?.trim() && (
-              <p className="muted">暫時沒有已啟用的組合優惠。</p>
+              <p className="muted">暫時未有組合優惠。</p>
             )}
             <p className="panel-footnote">優惠由內容團隊更新，實際詳情以 eShop 為準。</p>
           </aside>

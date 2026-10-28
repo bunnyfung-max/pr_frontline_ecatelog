@@ -25,7 +25,6 @@ import {
   trail,
   folderLabel,
   rootFolders,
-  folderPublishedContents,
   publishedContents,
 } from '@/lib/catalog';
 import { api } from '@/lib/client';
@@ -305,15 +304,6 @@ export function CatalogApp() {
                   {folder && (
                     <div className="frontline-folder-heading">
                       <h1>{folderLabel(folder)}</h1>
-                      <div className="frontline-folder-actions">
-                        <FolderCacheButton contents={folderPublishedContents(data, folder.id)} />
-                        <button
-                          className="search-clear"
-                          onClick={() => navigate(folder.parentId || '')}
-                        >
-                          返回上一層
-                        </button>
-                      </div>
                     </div>
                   )}
                   <FrontlineBrowser

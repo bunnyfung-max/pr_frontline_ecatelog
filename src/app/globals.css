@@ -2172,6 +2172,19 @@ textarea {
   margin-top: 19px;
   font-size: 12px;
 }
+.content-shopping-links-empty {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: #eaf0e1;
+  color: #7b876f;
+  font-size: 13px;
+}
+.content-shopping-links-empty svg {
+  flex-shrink: 0;
+}
 .offer-card--content-link > div {
   padding: 15px;
 }
@@ -2283,8 +2296,7 @@ textarea {
   text-align: center;
   justify-content: center;
 }
-.purchase-links-empty,
-.content-shopping-links .purchase-links-empty {
+.purchase-links-empty {
   margin-top: 12px;
   font-size: 14px;
   color: #535b65;

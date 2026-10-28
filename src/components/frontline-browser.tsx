@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ArrowUp,
   ArrowUpRight,
   ChevronRight,
   Folder as FolderIcon,
@@ -327,8 +326,8 @@ export function FrontlineBrowser({
                 <X size={18} strokeWidth={2} />
               </button>
             )}
-            <button type="submit" className="search-submit" aria-label="搜尋">
-              <ArrowUp size={18} strokeWidth={2.2} />
+            <button type="submit" className="search-submit">
+              搜尋
             </button>
           </div>
           {home && (

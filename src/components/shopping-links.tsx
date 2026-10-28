@@ -170,12 +170,19 @@ export function ContentShoppingLinks({
   const related = products.filter((p) => content.productIds.includes(p.id));
   return (
     <>
-      <section className="store-card content-shopping-links" aria-label="本份內容購物連結">
-        <ShoppingBag size={27} aria-hidden="true" />
-        <h3>{content.name}</h3>
-        <p>本份內容 / 自在購連結</p>
-        <StorePurchaseLink storeUrl={content.storeUrl} />
-      </section>
+      {safeLink(content.storeUrl) ? (
+        <section className="store-card content-shopping-links" aria-label="本份內容購物連結">
+          <ShoppingBag size={27} aria-hidden="true" />
+          <h3>{content.name}</h3>
+          <p>本份內容 / 自在購連結</p>
+          <StorePurchaseLink storeUrl={content.storeUrl} />
+        </section>
+      ) : (
+        <section className="content-shopping-links-empty" aria-label="本份內容購物連結">
+          <ShoppingBag size={16} aria-hidden="true" />
+          <span>自在購連結待設定</span>
+        </section>
+      )}
       {tags.length > 0 && (
         <section className="content-tags" aria-label="內容標籤">
           <div className="list-title">

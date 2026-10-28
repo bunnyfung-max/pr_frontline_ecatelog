@@ -175,14 +175,16 @@
   display: grid;
   place-items: center;
   flex-shrink: 0;
-  width: 40px;
   height: 40px;
   min-height: 40px;
-  padding: 0;
+  padding: 0 18px;
   margin: 0;
-  border-radius: 50%;
+  border-radius: 999px;
   background: var(--pr-orange);
   color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
   transition: background 0.15s ease, transform 0.1s ease;
 }
 .directory-search .search-submit:hover {
@@ -498,13 +500,6 @@ a.directory-entry:hover {
   letter-spacing: -0.2px;
   font-weight: 500;
 }
-.frontline-folder-actions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-}
 .folder-cache-control {
   display: flex;
   flex-direction: column;
@@ -702,9 +697,9 @@ a.directory-entry:hover {
     font-size: 16px;
   }
   .directory-search .search-submit {
-    width: 36px;
     height: 36px;
     min-height: 36px;
+    padding: 0 14px;
   }
   .search-chips {
     gap: 6px;
