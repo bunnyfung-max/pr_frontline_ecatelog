@@ -25,6 +25,7 @@ import {
 import { useContentAssetCache } from '@/hooks/use-content-cache';
 import { useReaderPreload } from '@/hooks/use-reader-preload';
 import { usePinchZoom } from '@/hooks/use-pinch-zoom';
+import { useSwipeNavigation } from '@/hooks/use-swipe-navigation';
 import { preloadPdfJs } from '@/lib/pdfjs-preload';
 import { External, Thumb } from './ui';
 import { ContentShoppingLinks } from './shopping-links';
@@ -137,6 +138,17 @@ export function Viewer({
   const navigate = (next: number) => {
     setPage(next);
   };
+  const canGoPrevious = page > 1 && !pageLoading;
+  const canGoNext = total > 0 && pages.at(-1)! < total && !pageLoading;
+  const goPrevious = () => navigate(previousReaderPage(leaves, page, horizontal));
+  const goNext = () => navigate(Math.min(total, pages.at(-1)! + 1));
+  useSwipeNavigation(pinchRef, {
+    enabled: scale <= 1,
+    onSwipe: (direction) => {
+      if (direction === 'next' && canGoNext) goNext();
+      if (direction === 'previous' && canGoPrevious) goPrevious();
+    },
+  });
   const handleClose = () => {
     closeRef.current();
   };
@@ -230,8 +242,8 @@ export function Viewer({
               <button
                 className="icon-btn"
                 aria-label="上一頁"
-                disabled={page <= 1 || pageLoading}
-                onClick={() => navigate(previousReaderPage(leaves, page, horizontal))}
+                disabled={!canGoPrevious}
+                onClick={goPrevious}
               >
                 <ChevronLeft size={18} />
               </button>
@@ -241,8 +253,8 @@ export function Viewer({
               <button
                 className="icon-btn"
                 aria-label="下一頁"
-                disabled={!total || pages.at(-1)! >= total || pageLoading}
-                onClick={() => navigate(Math.min(total, pages.at(-1)! + 1))}
+                disabled={!canGoNext}
+                onClick={goNext}
               >
                 <ChevronRight size={18} />
               </button>
