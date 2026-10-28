@@ -2185,6 +2185,9 @@ textarea {
 .content-shopping-links-empty svg {
   flex-shrink: 0;
 }
+.eshop-links-empty {
+  margin-top: 16px;
+}
 .offer-card--content-link > div {
   padding: 15px;
 }

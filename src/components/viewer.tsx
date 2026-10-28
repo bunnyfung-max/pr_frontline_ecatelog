@@ -6,6 +6,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ShoppingBag,
+  Tag,
   X,
   ExternalLink,
 } from 'lucide-react';
@@ -127,6 +128,8 @@ export function Viewer({
   const pages = readerSpread(leaves, page, horizontal);
   const current = leaves[pages[0] - 1];
   const pageLoading = Boolean(current?.pending);
+  const activeOffers = data.offers.filter((o) => activeOffer(o)).sort(byOrder);
+  const contentEshopUrl = content.eshopUrl?.trim() ?? '';
   useReaderPreload({
     leaves,
     visiblePages: pages,
@@ -277,41 +280,44 @@ export function Viewer({
               </button>
             </div>
             <ContentShoppingLinks content={content} products={data.products} />
-            <div className="list-title">
-              <h3>eShop 組合優惠</h3>
-            </div>
-            {data.offers
-              .filter((o) => activeOffer(o))
-              .sort(byOrder)
-              .map((o) => (
-                <article className="offer-card" key={o.id}>
-                  <div className="offer-image">
-                    <Thumb src={o.image} />
-                  </div>
-                  <div>
-                    <h3>{o.name}</h3>
-                    <p>{o.summary}</p>
-                    <EshopQrCode url={o.url} />
-                    <External url={o.url} className="text-link">
-                      查看組合優惠
-                    </External>
-                  </div>
-                </article>
-              ))}
-            {!data.offers.some((o) => activeOffer(o)) && content.eshopUrl?.trim() && (
-              <article className="offer-card offer-card--content-link">
-                <div>
-                  <EshopQrCode url={content.eshopUrl} />
-                  <External url={content.eshopUrl} className="text-link">
-                    前往 eShop
-                  </External>
+            {activeOffers.length > 0 || contentEshopUrl ? (
+              <>
+                <div className="list-title">
+                  <h3>eShop 組合優惠</h3>
                 </div>
-              </article>
+                {activeOffers.map((o) => (
+                  <article className="offer-card" key={o.id}>
+                    <div className="offer-image">
+                      <Thumb src={o.image} />
+                    </div>
+                    <div>
+                      <h3>{o.name}</h3>
+                      <p>{o.summary}</p>
+                      <EshopQrCode url={o.url} />
+                      <External url={o.url} className="text-link">
+                        查看組合優惠
+                      </External>
+                    </div>
+                  </article>
+                ))}
+                {activeOffers.length === 0 && (
+                  <article className="offer-card offer-card--content-link">
+                    <div>
+                      <EshopQrCode url={contentEshopUrl} />
+                      <External url={contentEshopUrl} className="text-link">
+                        前往 eShop
+                      </External>
+                    </div>
+                  </article>
+                )}
+                <p className="panel-footnote">優惠由內容團隊更新，實際詳情以 eShop 為準。</p>
+              </>
+            ) : (
+              <div className="content-shopping-links-empty eshop-links-empty">
+                <Tag size={16} aria-hidden="true" />
+                <span>暫時未有 eShop 組合優惠</span>
+              </div>
             )}
-            {!data.offers.some((o) => activeOffer(o)) && !content.eshopUrl?.trim() && (
-              <p className="muted">暫時未有組合優惠。</p>
-            )}
-            <p className="panel-footnote">優惠由內容團隊更新，實際詳情以 eShop 為準。</p>
           </aside>
         )}
       </div>
