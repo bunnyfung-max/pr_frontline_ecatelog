@@ -12,6 +12,7 @@ import {
 import type { PDFDocumentProxy } from 'pdfjs-dist';
 import type { Catalog, Content } from '@/lib/types';
 import { activeOffer, byOrder } from '@/lib/catalog';
+import { assetUrl } from '@/lib/client';
 import { contentPreviewRef, contentReaderSubtitle } from '@/lib/content-display';
 import {
   FILE_KIND_LABEL,
@@ -328,10 +329,18 @@ function ReaderPageMedia({
   onRetry: () => void;
 }) {
   const [failed, setFailed] = useState(false);
+  const [networkOnly, setNetworkOnly] = useState(false);
   const [imageReady, setImageReady] = useState(false);
   const imageRef = useRef<HTMLImageElement>(null);
+  const src = networkOnly ? assetUrl(leaf.ref) : resolveAssetUrl(leaf.ref);
+  const handleMediaError = () => {
+    // A stale offline-cache blob URL must not hide a file that is still online.
+    if (!networkOnly && src.startsWith('blob:')) setNetworkOnly(true);
+    else setFailed(true);
+  };
   useEffect(() => {
     setFailed(false);
+    setNetworkOnly(false);
     const node = imageRef.current;
     setImageReady(Boolean(node?.complete && node.naturalWidth > 0));
   }, [leaf.ref, leaf.kind, reload]);
@@ -373,13 +382,13 @@ function ReaderPageMedia({
     return (
       <video
         className="reader-video"
-        key={`${leaf.ref}-${page}-${reload}`}
-        src={resolveAssetUrl(leaf.ref)}
+        key={`${leaf.ref}-${page}-${reload}-${networkOnly}`}
+        src={src}
         aria-label={leaf.label}
         controls
         playsInline
         preload="auto"
-        onError={() => setFailed(true)}
+        onError={handleMediaError}
       />
     );
   }
@@ -400,14 +409,14 @@ function ReaderPageMedia({
         </div>
       )}
       <img
-        key={`${leaf.ref}-${reload}`}
+        key={`${leaf.ref}-${reload}-${networkOnly}`}
         ref={imageRef}
         className={`reader-media${imageReady ? '' : ' is-pending'}`}
-        src={resolveAssetUrl(leaf.ref)}
+        src={src}
         alt={`${contentName}，${leaf.label}，第 ${page} 頁`}
         decoding="async"
         onLoad={() => setImageReady(true)}
-        onError={() => setFailed(true)}
+        onError={handleMediaError}
       />
     </div>
   );

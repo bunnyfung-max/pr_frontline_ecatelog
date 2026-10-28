@@ -14,25 +14,36 @@ function collectRefs(contents: Content[]): string[] {
 }
 
 function useAssetCacheScope(contents: Content[], syncScope: CacheSyncScope = 'folder') {
-  const refs = useMemo(() => collectRefs(contents), [contents]);
-  const scopeKey = useMemo(() => contents.map((content) => content.id).join('\0'), [contents]);
+  const refsKey = collectRefs(contents).join('\0');
+  const refs = useMemo(() => (refsKey ? refsKey.split('\0') : []), [refsKey]);
   const [status, setStatus] = useState<ContentCacheStatus>('checking');
   const [progress, setProgress] = useState({ done: 0, total: 0, phase: 'download' as 'remove' | 'download' });
   const [blobUrls, setBlobUrls] = useState<Record<string, string>>({});
   const [cacheReady, setCacheReady] = useState(false);
-  const urlsRef = useRef<string[]>([]);
   const blobUrlsRef = useRef(blobUrls);
   blobUrlsRef.current = blobUrls;
+  const generationRef = useRef(0);
 
-  const revokeUrls = useCallback(() => {
-    for (const url of urlsRef.current) URL.revokeObjectURL(url);
-    urlsRef.current = [];
-  }, []);
+  useEffect(() => {
+    const urls = Object.values(blobUrls);
+    return () => {
+      const live = new Set(Object.values(blobUrlsRef.current));
+      for (const url of urls) if (!live.has(url)) URL.revokeObjectURL(url);
+    };
+  }, [blobUrls]);
+
+  useEffect(
+    () => () => {
+      for (const url of Object.values(blobUrlsRef.current)) URL.revokeObjectURL(url);
+      blobUrlsRef.current = {};
+    },
+    [],
+  );
 
   const hydrateFromCache = useCallback(async () => {
+    const generation = ++generationRef.current;
     setCacheReady(false);
     if (!refs.length) {
-      revokeUrls();
       setBlobUrls({});
       setStatus('ready');
       setProgress({ done: 0, total: 0, phase: 'download' });
@@ -43,28 +54,25 @@ function useAssetCacheScope(contents: Content[], syncScope: CacheSyncScope = 'fo
     const entries = await Promise.all(
       refs.map(async (ref) => ({ ref, blob: await getCachedAsset(ref) })),
     );
+    if (generation !== generationRef.current) return;
+    // Asset refs are immutable, so a blob URL already made for a ref stays valid.
+    const previous = blobUrlsRef.current;
     const nextUrls: Record<string, string> = {};
-    const created: string[] = [];
     let cached = 0;
     for (const { ref, blob } of entries) {
       if (!blob) continue;
-      const url = URL.createObjectURL(blob);
-      nextUrls[ref] = url;
-      created.push(url);
+      nextUrls[ref] = previous[ref] ?? URL.createObjectURL(blob);
       cached += 1;
     }
-    revokeUrls();
-    urlsRef.current = created;
     setBlobUrls(nextUrls);
     setProgress({ done: cached, total: refs.length, phase: 'download' });
     setStatus(cached === 0 ? 'none' : cached === refs.length ? 'ready' : 'partial');
     setCacheReady(true);
-  }, [refs, revokeUrls]);
+  }, [refs]);
 
   useEffect(() => {
     void hydrateFromCache();
-    return () => revokeUrls();
-  }, [scopeKey, hydrateFromCache, revokeUrls]);
+  }, [hydrateFromCache]);
 
   const resolveAssetUrl = useCallback((ref: string) => blobUrlsRef.current[ref] ?? assetUrl(ref), []);
 
