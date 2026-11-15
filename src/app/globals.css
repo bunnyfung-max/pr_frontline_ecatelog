@@ -761,6 +761,7 @@ img {
   gap: 18px;
   margin: 30px 0 18px;
 }
+.section-heading h1,
 .section-heading h2 {
   font-size: 21px;
   letter-spacing: 0.5px;
@@ -919,8 +920,10 @@ img {
   font-size: 9px;
   color: #b5b9ad;
 }
-.tool-card h3 {
+.tool-card h3,
+.cms-folder-card h2 {
   font-size: 15px;
+  line-height: 1.45;
   margin-bottom: 6px;
   white-space: nowrap;
 }
@@ -2554,7 +2557,8 @@ textarea {
   .tool-card p {
     font-size: 12px;
   }
-  .tool-card h3 {
+  .tool-card h3,
+  .cms-folder-card h2 {
     font-size: 18px;
   }
 }
@@ -2585,7 +2589,8 @@ textarea {
   .tool-card {
     padding: 16px 12px 0;
   }
-  .tool-card h3 {
+  .tool-card h3,
+  .cms-folder-card h2 {
     font-size: 13px;
   }
   .tool-card p {
@@ -2836,6 +2841,7 @@ textarea {
     align-items: flex-start;
     flex-wrap: wrap;
   }
+  .section-heading h1,
   .section-heading h2 {
     font-size: 19px;
   }
@@ -2848,7 +2854,8 @@ textarea {
   .tool-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  .tool-card h3 {
+  .tool-card h3,
+  .cms-folder-card h2 {
     font-size: 15px;
   }
   .tool-card p {
@@ -3071,7 +3078,8 @@ textarea {
 .tool-card {
   min-height: 242px;
 }
-.tool-card h3 {
+.tool-card h3,
+.cms-folder-card h2 {
   font-size: 16px;
 }
 .tool-card .card-bottom {
@@ -3267,7 +3275,8 @@ fieldset:disabled .kit-file-button {
   max-width: 28ch;
 }
 @media (max-width: 900px) {
-  .tool-card h3 {
+  .tool-card h3,
+  .cms-folder-card h2 {
     font-size: 14px;
   }
   .tool-card p {

@@ -14,6 +14,7 @@ export function CmsFolderCard({
   onDelete,
   deleteBlocked,
   deleteTitle,
+  headingLevel = 3,
 }: {
   name: string;
   description?: string;
@@ -25,7 +26,9 @@ export function CmsFolderCard({
   onDelete: () => void;
   deleteBlocked?: boolean;
   deleteTitle?: string;
+  headingLevel?: 2 | 3;
 }) {
+  const Heading = headingLevel === 2 ? 'h2' : 'h3';
   return (
     <div className="tool-card tool-card-managed cms-folder-card">
       <button type="button" className="tool-card-open" onClick={onOpen}>
@@ -35,7 +38,7 @@ export function CmsFolderCard({
         {index !== undefined && (
           <span className="card-number">{String(index + 1).padStart(2, '0')}</span>
         )}
-        <h3>{name}</h3>
+        <Heading>{name}</Heading>
         <p>{description || meta}</p>
       </button>
       <div className="tool-card-footer">

@@ -1,0 +1,92 @@
+/* Reader controls are intentionally large enough for a shared tablet. */
+.viewer .viewer-top {
+  min-height: 56px;
+  height: 56px;
+  padding: 0 12px;
+}
+.viewer .viewer-body { height: calc(100% - 56px); }
+.viewer .viewer-back,
+.viewer .viewer-shop,
+.viewer .icon-btn {
+  min-height: 44px;
+}
+.viewer .icon-btn { width: 44px; min-width: 44px; padding: 10px; }
+.viewer .viewer-shop {
+  width: auto;
+  min-width: 44px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.viewer .viewer-shop.selected { background: #edf6e9; border-color: #669b5d; }
+.viewer .viewer-back-label { display: inline; font-size: 13px; }
+.viewer .viewer-title strong { font-size: 14px; }
+.viewer .viewer-title small { color: #626e5c; font-size: 11px; }
+.viewer .reader-toolbar {
+  height: auto;
+  min-height: 54px;
+  padding: 4px 12px;
+  gap: 8px 18px;
+  flex-wrap: wrap;
+}
+.viewer .page-controls > span { min-width: 64px; font-size: 13px; }
+.viewer-layout-controls, .viewer .zoom-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.viewer-mode-button, .viewer-zoom-reset, .viewer-pdf-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  border: 1px solid #d9e0d3;
+  border-radius: 7px;
+  background: white;
+  color: #34442e;
+  padding: 8px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  text-decoration: none;
+}
+.viewer-mode-button[aria-pressed='true'] {
+  border-color: #669b5d;
+  color: #315c2c;
+  background: #edf6e9;
+  font-weight: 700;
+}
+.viewer-zoom-reset { min-width: 56px; }
+.viewer-pdf-link { gap: 6px; }
+.viewer button:focus-visible, .viewer a:focus-visible {
+  outline: 3px solid #c15c28;
+  outline-offset: 2px;
+}
+.viewer.spread-double .paper:not(:only-child) {
+  max-width: min(calc((100cqh - 2px) * 0.818), calc(50% - 8px));
+}
+.viewer .page-spread-host.is-zoomed { display: block; position: relative; flex: 0 0 auto; min-width: 0; align-self: flex-start; }
+.viewer .page-spread-host.is-zoomed .page-spread { align-items: center; }
+.viewer .page-spread-host.is-zoomed .paper { max-width: none; }
+.viewer .page-spread-host.is-zoomed .paper img,
+.viewer .page-spread-host.is-zoomed .paper canvas { max-height: 100cqh; }
+/* In portrait, show a complete product view instead of hiding half the plan. */
+.viewer.portrait.panel-open .reader-area { display: none; }
+.viewer.portrait .shopping-panel {
+  position: static;
+  inset: auto;
+  width: 100%;
+  height: 100%;
+  box-shadow: none;
+  border-left: 0;
+}
+.viewer.portrait .shopping-panel > * { max-width: 680px; margin-left: auto; margin-right: auto; }
+@media (max-width: 620px) {
+  .viewer .viewer-top { padding: 0 6px; gap: 4px; }
+  .viewer .viewer-shop { padding: 7px 8px; font-size: 12px; }
+  .viewer .reader-toolbar { gap: 2px 8px; padding: 4px; }
+  .viewer-mode-button { padding: 7px 9px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .viewer, .viewer .reader-media { animation: none; }
+}

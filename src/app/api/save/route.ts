@@ -10,6 +10,8 @@ import {
 } from '@/lib/server';
 import { requireCmsAccess } from '@/lib/cms-access';
 import { schemas } from '@/lib/validation';
+import { housingKitPublishError } from '@/lib/sales-kit';
+import { incompletePublishedKitsMovingToHousing } from '@/lib/housing-kit-policy';
 import { descendants, trail, folderDeleteBlockers, folderDeletionPlan } from '@/lib/catalog';
 import type { Catalog, Entity } from '@/lib/types';
 import { catalogItemExists, catalogItemName, incomingItemName } from '@/lib/user-activity';
@@ -102,11 +104,14 @@ export async function POST(request: Request) {
         throw new HttpError(400, '請先進入內容所屬的目錄。');
       if (value.productIds.some((id) => !data.products.some((p) => p.id === id)))
         throw new HttpError(400, '相關產品不存在。');
+      const isHousingDestination = trail(data.folders, value.folderId).some((f) => f.id === 'housing');
+      const publishError = housingKitPublishError(value, isHousingDestination);
+      if (publishError) throw new HttpError(400, publishError);
       if (
         value.type === 'image' &&
         !value.salesKit &&
         (current?.salesKit ||
-          (!current && trail(data.folders, value.folderId).some((f) => f.id === 'housing')))
+          (!current && isHousingDestination))
       )
         throw new HttpError(400, '請使用 Sales Kit 標準上載格式。');
       value.updatedAt = new Date().toISOString();
@@ -121,6 +126,19 @@ export async function POST(request: Request) {
           throw new HttpError(400, '資料夾層級無效。');
         if (trail(data.folders, value.parentId).length >= 12)
           throw new HttpError(400, '資料夾層級過深。');
+        if (existing && existing.parentId !== value.parentId) {
+          const incomplete = incompletePublishedKitsMovingToHousing(
+            data.folders,
+            data.contents,
+            value.id,
+            value.parentId,
+          );
+          if (incomplete.length)
+            throw new HttpError(
+              400,
+              `未能移入 New Housing：${incomplete.length} 份已發布 Sales Kit 未有平面圖及效果圖，請先補齊或下架。`,
+            );
+        }
       } else {
         if (existing && existing.parentId) throw new HttpError(400, '不可將子目錄改為主目錄。');
         if (

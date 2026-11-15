@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
   ArrowLeft,
@@ -9,7 +9,10 @@ import {
   Tag,
   X,
   ExternalLink,
+  Minus,
+  Plus,
 } from 'lucide-react';
+import './viewer-enhancements.css';
 import type { PDFDocumentProxy } from 'pdfjs-dist';
 import type { Catalog, Content } from '@/lib/types';
 import { activeOffer, byOrder } from '@/lib/catalog';
@@ -43,12 +46,17 @@ export function Viewer({
   previewOrientation?: 'landscape' | 'portrait';
 }) {
   const [landscape, setLandscape] = useState(true);
+  const [layoutMode, setLayoutMode] = useState<'auto' | 'single' | 'double'>('auto');
   const [page, setPage] = useState(1);
   const [panel, setPanel] = useState(false);
   const [pdfs, setPdfs] = useState<Record<string, PDFDocumentProxy>>({});
   const [pdfCounts, setPdfCounts] = useState<Record<string, number>>({});
   const [reload, setReload] = useState(0);
+  const pageHistory = useRef<number[]>([]);
   const closeRef = useRef(close);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const returnButtonRef = useRef<HTMLButtonElement>(null);
+  const shoppingButtonRef = useRef<HTMLButtonElement>(null);
   closeRef.current = close;
   const assets = useMemo(
     () => readerAssets(content),
@@ -72,19 +80,41 @@ export function Viewer({
     update();
     media.addEventListener('change', update);
     const previousOverflow = document.body.style.overflow;
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     document.body.style.overflow = 'hidden';
+    returnButtonRef.current?.focus();
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') closeRef.current();
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        closeRef.current();
+        return;
+      }
+      if (event.key !== 'Tab' || !dialogRef.current) return;
+      const controls = Array.from(dialogRef.current.querySelectorAll<HTMLElement>(
+        'button:not(:disabled), a[href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), video[controls], [tabindex]:not([tabindex="-1"])',
+      )).filter((el) => el.getClientRects().length > 0 && !el.closest('[inert]'));
+      if (!controls.length) {
+        event.preventDefault();
+        dialogRef.current.focus();
+        return;
+      }
+      const activeIndex = controls.indexOf(document.activeElement as HTMLElement);
+      if (activeIndex < 0 || (event.shiftKey && activeIndex === 0) || (!event.shiftKey && activeIndex === controls.length - 1)) {
+        event.preventDefault();
+        (event.shiftKey ? controls[controls.length - 1] : controls[0]).focus();
+      }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => {
       media.removeEventListener('change', update);
       window.removeEventListener('keydown', onKeyDown);
       document.body.style.overflow = previousOverflow;
+      if (previousFocus?.isConnected) previousFocus.focus();
     };
   }, []);
   useEffect(() => {
     setPage(1);
+    pageHistory.current = [];
   }, [assets]);
   useEffect(() => {
     let cancelled = false;
@@ -122,11 +152,28 @@ export function Viewer({
       });
     };
   }, [assets, reload, pdfRefs, resolveAssetUrl]);
-  const horizontal = previewOrientation ? previewOrientation === 'landscape' : landscape;
+  const orientationLandscape = previewOrientation ? previewOrientation === 'landscape' : landscape;
+  const horizontal = previewOrientation
+    ? orientationLandscape
+    : layoutMode === 'auto'
+      ? landscape && !panel
+      : layoutMode === 'double';
+  useEffect(() => {
+    if (!orientationLandscape && panel) {
+      const reader = dialogRef.current?.querySelector('.reader-area');
+      reader?.querySelectorAll('video').forEach((video) => video.pause());
+      if (reader?.contains(document.activeElement)) shoppingButtonRef.current?.focus();
+    }
+  }, [orientationLandscape, panel]);
   const leaves = useMemo(() => readerLeaves(assets, pdfCounts), [assets, pdfCounts]);
   const total = leaves.length;
   const pages = readerSpread(leaves, page, horizontal);
   const current = leaves[pages[0] - 1];
+  useEffect(() => { pageHistory.current = []; }, [leaves]);
+  const visiblePdfs = Array.from(new Map(
+    pages.map((n) => leaves[n - 1]).filter((leaf) => leaf?.kind === 'pdf' && !leaf.pending && !leaf.failed)
+      .map((leaf) => [leaf.ref, leaf]),
+  ).values());
   const pageLoading = Boolean(current?.pending);
   const activeOffers = data.offers.filter((o) => activeOffer(o)).sort(byOrder);
   const contentEshopUrl = content.eshopUrl?.trim() ?? '';
@@ -137,14 +184,59 @@ export function Viewer({
     pdfs,
     resetKey: `${content.id}:${reload}:${assets.map((asset) => asset.ref).join('\0')}`,
   });
-  const { scale, targetRef: pinchRef } = usePinchZoom(page);
+  const { scale, setScale, targetRef: pinchRef } = usePinchZoom(page);
+  const spreadRef = useRef<HTMLDivElement>(null);
+  const scaleRef = useRef(scale);
+  scaleRef.current = scale;
+  const [baseSpread, setBaseSpread] = useState<{ width: number; height: number; paperWidths: number[] } | null>(null);
+  // Measure the fitted, unzoomed spread. Transforming that exact layout makes
+  // 125% mean 1.25 times what the user saw at 100%, for any image aspect ratio.
+  useLayoutEffect(() => {
+    const spread = spreadRef.current;
+    if (!spread || scale !== 1) return;
+    const papers = Array.from(spread.querySelectorAll<HTMLElement>('.paper'));
+    const measure = () => {
+      if (scaleRef.current !== 1) return;
+      const rects = papers.map((paper) => paper.getBoundingClientRect());
+      if (!rects.length || rects.some((rect) => !rect.width || !rect.height)) return;
+      const next = {
+        width: Math.max(...rects.map((rect) => rect.right)) - Math.min(...rects.map((rect) => rect.left)),
+        height: Math.max(...rects.map((rect) => rect.height)),
+        paperWidths: rects.map((rect) => rect.width),
+      };
+      setBaseSpread((previous) => previous &&
+        Math.abs(previous.width - next.width) < 0.1 &&
+        Math.abs(previous.height - next.height) < 0.1 &&
+        previous.paperWidths.length === next.paperWidths.length &&
+        previous.paperWidths.every((width, index) => Math.abs(width - next.paperWidths[index]) < 0.1)
+        ? previous : next);
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(spread);
+    papers.forEach((paper) => observer.observe(paper));
+    return () => observer.disconnect();
+  }, [scale, page, horizontal, orientationLandscape, panel, leaves, reload]);
+  // A new fit is required after rotation, layout choice or panel resizing.
+  useEffect(() => {
+    setScale(1);
+    pageHistory.current = [];
+  }, [horizontal, orientationLandscape, panel, setScale]);
+  useEffect(() => {
+    const resetForResize = () => setScale(1);
+    window.addEventListener('resize', resetForResize);
+    return () => window.removeEventListener('resize', resetForResize);
+  }, [setScale]);
   const navigate = (next: number) => {
     setPage(next);
   };
   const canGoPrevious = page > 1 && !pageLoading;
   const canGoNext = total > 0 && pages.at(-1)! < total && !pageLoading;
-  const goPrevious = () => navigate(previousReaderPage(leaves, page, horizontal));
-  const goNext = () => navigate(Math.min(total, pages.at(-1)! + 1));
+  const goPrevious = () => navigate(pageHistory.current.pop() ?? previousReaderPage(leaves, page, horizontal));
+  const goNext = () => {
+    pageHistory.current.push(page);
+    navigate(Math.min(total, pages.at(-1)! + 1));
+  };
   useSwipeNavigation(pinchRef, {
     enabled: scale <= 1,
     onSwipe: (direction) => {
@@ -155,16 +247,23 @@ export function Viewer({
   const handleClose = () => {
     closeRef.current();
   };
+  const closePanel = () => {
+    setPanel(false);
+    shoppingButtonRef.current?.focus();
+  };
   const markup = (
     <div
       role="dialog"
       aria-modal="true"
-      className={`viewer ${horizontal ? 'landscape' : 'portrait'} ${panel ? 'panel-open' : ''} ${previewOrientation ? 'is-preview' : ''}`}
+      ref={dialogRef}
+      tabIndex={-1}
+      className={`viewer ${orientationLandscape ? 'landscape' : 'portrait'} ${horizontal ? 'spread-double' : 'spread-single'} ${panel ? 'panel-open' : ''} ${previewOrientation ? 'is-preview' : ''}`}
       aria-label={`${content.name} 閱讀器`}
     >
       <header className="viewer-top">
         <button
           type="button"
+          ref={returnButtonRef}
           className="subtle viewer-back"
           onClick={handleClose}
           aria-label="返回目錄"
@@ -177,18 +276,20 @@ export function Viewer({
           <small>
             {previewOrientation
               ? `預覽 · ${horizontal ? '橫向雙頁' : '直向單頁'}`
-              : contentReaderSubtitle(content, assets, horizontal)}
+              : contentReaderSubtitle(content, assets, horizontal).replace('橫向雙頁', '雙頁').replace('直向單頁', '單頁')}
           </small>
         </div>
         <button
           type="button"
           className={`shopping-toggle viewer-shop ${panel ? 'selected' : ''}`}
-          onClick={() => setPanel(!panel)}
+          ref={shoppingButtonRef}
+          onClick={() => panel ? closePanel() : setPanel(true)}
           aria-expanded={panel}
           aria-controls="shopping-panel"
-          aria-label="購物功能列"
+          aria-label={panel ? '關閉相關產品面板' : '查看相關產品'}
         >
           <ShoppingBag size={17} />
+          <span>相關產品</span>
         </button>
       </header>
       <div className="viewer-body">
@@ -197,10 +298,15 @@ export function Viewer({
             {current && current.kind !== 'link' ? (
               <div
                 className={`page-spread-host${scale > 1 ? ' is-zoomed' : ''}`}
-                style={scale > 1 ? { width: `${scale * 100}%`, minWidth: '100%' } : undefined}
+                style={scale > 1 && baseSpread ? { width: baseSpread.width * scale, height: baseSpread.height * scale } : undefined}
               >
-                <div className="page-spread" data-testid="page-spread">
-                  {pages.map((n) => {
+                <div
+                  className="page-spread"
+                  data-testid="page-spread"
+                  ref={spreadRef}
+                  style={scale > 1 && baseSpread ? { position: 'absolute', left: 0, top: 0, width: baseSpread.width, height: baseSpread.height, transform: `scale(${scale})`, transformOrigin: 'top left' } : undefined}
+                >
+                  {pages.map((n, index) => {
                     const leaf = leaves[n - 1];
                     return (
                       <div
@@ -209,6 +315,7 @@ export function Viewer({
                         data-page={n}
                         data-file-kind={leaf.kind}
                         data-file-label={leaf.label}
+                        style={scale > 1 && baseSpread ? { flex: '0 0 auto', width: baseSpread.paperWidths[index], maxWidth: 'none' } : undefined}
                       >
                         <ReaderPageMedia
                           contentName={content.name}
@@ -219,6 +326,7 @@ export function Viewer({
                           heroSrc={previewRef ? resolveAssetUrl(previewRef) : ''}
                           resolveAssetUrl={resolveAssetUrl}
                           onRetry={() => setReload((k) => k + 1)}
+                          onMediaReady={() => setScale(1)}
                         />
                         <span className="paper-type-badge">{FILE_KIND_LABEL[leaf.kind]}</span>
                         <span className="paper-number">{n}</span>
@@ -262,6 +370,24 @@ export function Viewer({
                 <ChevronRight size={18} />
               </button>
             </div>
+            {!previewOrientation && (
+              <>
+                <div className="viewer-layout-controls" role="group" aria-label="頁面顯示模式">
+                  <button type="button" className="viewer-mode-button" aria-pressed={!horizontal} onClick={() => setLayoutMode('single')}>單頁</button>
+                  <button type="button" className="viewer-mode-button" aria-pressed={horizontal} onClick={() => setLayoutMode('double')}>雙頁</button>
+                </div>
+                <div className="zoom-controls" role="group" aria-label="展示內容縮放">
+                  <button type="button" className="icon-btn" aria-label="縮小" disabled={scale <= 1} onClick={() => setScale(scale - 0.25)}><Minus size={18} /></button>
+                  <button type="button" className="viewer-zoom-reset" onClick={() => setScale(1)} aria-label={`目前縮放 ${Math.round(scale * 100)}%，重設縮放`}>{Math.round(scale * 100)}%</button>
+                  <button type="button" className="icon-btn" aria-label="放大" disabled={scale >= 3} onClick={() => setScale(scale + 0.25)}><Plus size={18} /></button>
+                </div>
+                {visiblePdfs.map((pdf) => (
+                  <a className="viewer-pdf-link" key={pdf.ref} href={resolveAssetUrl(pdf.ref)} target="_blank" rel="noopener noreferrer">
+                    開啟原 PDF{visiblePdfs.length > 1 ? `：${pdf.label}` : ''} <ExternalLink size={14} />
+                  </a>
+                ))}
+              </>
+            )}
           </div>
         </section>
         {panel && (
@@ -269,12 +395,12 @@ export function Viewer({
             <div className="panel-heading">
               <div>
                 <span className="eyebrow">SHOP THE IDEAS</span>
-                <h2>把靈感，帶回家。</h2>
+                <h2>相關產品及優惠</h2>
               </div>
               <button
                 className="icon-btn"
-                aria-label="收起購物功能列"
-                onClick={() => setPanel(false)}
+                aria-label="收起相關產品"
+                onClick={closePanel}
               >
                 <X size={21} />
               </button>
@@ -324,7 +450,11 @@ export function Viewer({
     </div>
   );
   if (typeof document === 'undefined') return null;
-  return createPortal(markup, document.body);
+  // CMS uses a native modal dialog in the browser top layer. Its preview must
+  // live inside that dialog, otherwise the browser makes the preview inert.
+  const activeDialog = document.activeElement?.closest('dialog[open]');
+  const previewDialog = activeDialog ?? Array.from(document.querySelectorAll('dialog[open]')).at(-1);
+  return createPortal(markup, previewOrientation && previewDialog ? previewDialog : document.body);
 }
 function ReaderPageMedia({
   contentName,
@@ -335,6 +465,7 @@ function ReaderPageMedia({
   heroSrc,
   resolveAssetUrl,
   onRetry,
+  onMediaReady,
 }: {
   contentName: string;
   leaf: ReaderLeaf;
@@ -344,6 +475,7 @@ function ReaderPageMedia({
   heroSrc: string;
   resolveAssetUrl: (ref: string) => string;
   onRetry: () => void;
+  onMediaReady: () => void;
 }) {
   const [failed, setFailed] = useState(false);
   const [networkOnly, setNetworkOnly] = useState(false);
@@ -360,6 +492,7 @@ function ReaderPageMedia({
     setNetworkOnly(false);
     const node = imageRef.current;
     setImageReady(Boolean(node?.complete && node.naturalWidth > 0));
+    if (node?.complete && node.naturalWidth > 0) onMediaReady();
   }, [leaf.ref, leaf.kind, reload]);
   if (leaf.pending) {
     return (
@@ -385,7 +518,7 @@ function ReaderPageMedia({
     );
   }
   if (leaf.kind === 'pdf' && pdf) {
-    return <PdfPage pdf={pdf} page={leaf.pdfPage!} />;
+    return <PdfPage pdf={pdf} page={leaf.pdfPage!} onReady={onMediaReady} />;
   }
   if (leaf.kind === 'video') {
     if (failed) {
@@ -405,6 +538,7 @@ function ReaderPageMedia({
         controls
         playsInline
         preload="auto"
+        onLoadedMetadata={onMediaReady}
         onError={handleMediaError}
       />
     );
@@ -432,14 +566,16 @@ function ReaderPageMedia({
         src={src}
         alt={`${contentName}，${leaf.label}，第 ${page} 頁`}
         decoding="async"
-        onLoad={() => setImageReady(true)}
+        onLoad={() => { setImageReady(true); onMediaReady(); }}
         onError={handleMediaError}
       />
     </div>
   );
 }
-function PdfPage({ pdf, page }: { pdf: PDFDocumentProxy; page: number }) {
+function PdfPage({ pdf, page, onReady }: { pdf: PDFDocumentProxy; page: number; onReady: () => void }) {
   const canvas = useRef<HTMLCanvasElement>(null);
+  const onReadyRef = useRef(onReady);
+  onReadyRef.current = onReady;
   const [error, setError] = useState(false);
   useEffect(() => {
     let stopped = false;
@@ -453,7 +589,7 @@ function PdfPage({ pdf, page }: { pdf: PDFDocumentProxy; page: number }) {
         node.width = viewport.width;
         node.height = viewport.height;
         task = p.render({ canvas: node, viewport });
-        return task.promise;
+        return task.promise.then(() => { if (!stopped) onReadyRef.current(); });
       })
       .catch((e) => {
         if (!stopped && e?.name !== 'RenderingCancelledException') setError(true);

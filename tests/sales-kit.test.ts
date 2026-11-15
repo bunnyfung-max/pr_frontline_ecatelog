@@ -1,10 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { initialCatalog } from '../src/lib/seed';
+import { incompletePublishedKitsMovingToHousing } from '../src/lib/housing-kit-policy';
 import { schemas } from '../src/lib/validation';
 import {
   kitFiles,
   kitComplete,
+  housingKitPublishError,
+  HOUSING_KIT_REQUIRED,
   setKitSlot,
   moveKitExtra,
   readerAssets,
@@ -63,6 +66,39 @@ test('incomplete kit can be drafted, but publishing requires floor plan only', (
     schemas.content.safeParse({ ...kit, files: [images[0], '', '', '', ''] }).success,
     true,
   );
+});
+
+test('New Housing publication requires both floor plan and effect image, but drafts remain valid', () => {
+  const floorOnly = { ...kit, files: [images[0], '', '', '', ''] };
+  const twoRequired = { ...kit, files: [images[0], images[1], '', '', ''] };
+  assert.equal(kitComplete(floorOnly.files, HOUSING_KIT_REQUIRED), false);
+  assert.match(housingKitPublishError(floorOnly, true)!, /平面圖及效果圖/);
+  assert.equal(housingKitPublishError({ ...floorOnly, status: 'draft' }, true), null);
+  assert.equal(housingKitPublishError({ ...floorOnly, status: 'archived' }, true), null);
+  assert.equal(housingKitPublishError(floorOnly, false), null);
+  assert.equal(housingKitPublishError(twoRequired, true), null);
+  assert.equal(housingKitPublishError({ ...floorOnly, salesKit: false }, true), null);
+});
+
+test('moving a folder into New Housing checks published kits in all descendants only', () => {
+  const folders = [
+    { id: 'housing', parentId: null, name: 'Housing', subtitle: '', order: 0 },
+    { id: 'other', parentId: null, name: 'Other', subtitle: '', order: 0 },
+    { id: 'branch', parentId: 'other', name: 'Branch', subtitle: '', order: 0 },
+    { id: 'child', parentId: 'branch', name: 'Child', subtitle: '', order: 0 },
+    { id: 'existing', parentId: 'housing', name: 'Existing', subtitle: '', order: 0 },
+  ];
+  const floorOnly = { ...kit, id: 'incomplete', folderId: 'child', files: [images[0], '', '', '', ''] };
+  const draft = { ...floorOnly, id: 'draft', status: 'draft' as const };
+  const full = { ...kit, id: 'complete', folderId: 'branch', files: [images[0], images[1], '', '', ''] };
+  const oldHousing = { ...floorOnly, id: 'old-housing', folderId: 'existing' };
+  const contents = [floorOnly, draft, full, oldHousing];
+  assert.deepEqual(
+    incompletePublishedKitsMovingToHousing(folders, contents, 'branch', 'existing').map((c) => c.id),
+    ['incomplete'],
+  );
+  assert.deepEqual(incompletePublishedKitsMovingToHousing(folders, contents, 'branch', 'other'), []);
+  assert.deepEqual(incompletePublishedKitsMovingToHousing(folders, contents, 'existing', 'housing'), []);
 });
 
 test('fixed slots are images; extras support PDF/video and reject unsafe or empty refs', () => {

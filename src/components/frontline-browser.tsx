@@ -15,6 +15,7 @@ import {
   filterSearchMatchReasons,
   folderHasBrowseableContent,
   folderLabel,
+  folderPublishedContents,
   SEARCH_CATEGORIES,
   SEARCH_CATEGORY_LABEL,
   suggestForCategory,
@@ -46,9 +47,11 @@ export function FrontlineBrowser({
   navigate: (id: string) => void;
   open: (content: Content) => void;
 }) {
-  const [input, setInput] = useState(query);
+  const [input, setInput] = useState(() => splitSearchQuery(query).term);
   const [searchText, setSearchText] = useState(query);
-  const [activeCategory, setActiveCategory] = useState<SearchCategory | null>(null);
+  const [activeCategory, setActiveCategory] = useState<SearchCategory | null>(
+    () => splitSearchQuery(query).category,
+  );
   const inputRef = useRef<HTMLInputElement>(null);
   const home = !folder;
   const folderId = folder?.id ?? null;
@@ -145,8 +148,8 @@ export function FrontlineBrowser({
       {items.map((f) => {
         const hasContent = folderHasBrowseableContent(data, f.id);
         const childFolders = data.folders.filter((child) => child.parentId === f.id).length;
-        const directContents =
-          data.contents.filter((c) => c.folderId === f.id && c.status === 'published').length +
+        const availableContents =
+          folderPublishedContents(data, f.id).length +
           (f.id === 'scenes' ? data.scenes.filter((s) => s.active).length : 0);
         return (
           <button
@@ -170,7 +173,7 @@ export function FrontlineBrowser({
               {cards && (
                 <small>
                   {hasContent
-                    ? `${childFolders} 個資料夾 · ${directContents} 項內容`
+                    ? `${childFolders} 個資料夾 · ${availableContents} 項內容${childFolders ? '（含下層）' : ''}`
                     : '暫無內容'}
                 </small>
               )}
@@ -221,7 +224,9 @@ export function FrontlineBrowser({
       <div className="search-content-list">
         {items.map(({ item: c, reasons }) => {
           const products = productLabelMap.get(c.id) ?? [];
-          const visibleReasons = filterSearchMatchReasons(reasons, products);
+          const visibleReasons = filterSearchMatchReasons(reasons, products).filter(
+            (reason) => !products.some((product) => product.includes(reason.value) || reason.value.includes(product)),
+          );
           return (
           <button
             className="search-content-entry"
@@ -242,9 +247,10 @@ export function FrontlineBrowser({
                 <div className="search-content-products">
                   <span className="search-content-products-label">包含產品</span>
                   <ul className="search-content-product-list">
-                    {products.map((product) => (
+                    {products.slice(0, 2).map((product) => (
                       <li key={product}>{product}</li>
                     ))}
+                    {products.length > 2 && <li>另有 {products.length - 2} 項產品</li>}
                   </ul>
                 </div>
               )}
@@ -336,14 +342,10 @@ export function FrontlineBrowser({
                 <button
                   key={category}
                   type="button"
-                  className={`search-chip${activeCategory === category || splitSearchQuery(searchText).category === category ? ' search-chip-active' : ''}`}
+                  className={`search-chip${activeCategory === category ? ' search-chip-active' : ''}`}
+                  aria-pressed={activeCategory === category}
                   onClick={() => {
-                    setActiveCategory(category);
-                    setInput('');
-                    if (searching) {
-                      setSearchText('');
-                      onSearch('');
-                    }
+                    setActiveCategory(activeCategory === category ? null : category);
                     inputRef.current?.focus();
                   }}
                 >

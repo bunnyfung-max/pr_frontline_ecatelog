@@ -30,6 +30,19 @@ test('five entry points, hierarchy and branch-scoped attribute search', async ({
 test('viewer rotates, retains page and panel state, odd final page is single', async ({ page }) => {
   await page.goto('/?folder=unit-a&content=kit-a');
   await expect(page.getByRole('dialog')).toBeVisible();
+  await expect(page.getByRole('button', { name: '返回目錄' })).toBeFocused();
+  await page.keyboard.press('Shift+Tab');
+  await expect(page.getByRole('button', { name: '放大' })).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(page.getByRole('button', { name: '返回目錄' })).toBeFocused();
+  await expect(page.locator('.paper')).toHaveCount(2);
+  await page.getByRole('button', { name: '單頁', exact: true }).click();
+  await expect(page.locator('.paper')).toHaveCount(1);
+  await page.getByRole('button', { name: '放大', exact: true }).click();
+  await expect(page.getByRole('button', { name: /目前縮放 125%/ })).toBeVisible();
+  await page.getByRole('button', { name: /目前縮放 125%/ }).click();
+  await expect(page.getByRole('button', { name: /目前縮放 100%/ })).toBeVisible();
+  await page.getByRole('button', { name: '雙頁', exact: true }).click();
   await expect(page.locator('.paper')).toHaveCount(2);
   await page.screenshot({ path: 'qa/viewer-landscape.png', fullPage: true });
   await page.getByRole('button', { name: '下一頁' }).click();
@@ -39,24 +52,40 @@ test('viewer rotates, retains page and panel state, odd final page is single', a
   await expect(page.locator('.paper')).toHaveCount(1);
   await expect(page.locator('.paper')).toHaveAttribute('data-page', '5');
   await page.getByRole('button', { name: '上一頁' }).click();
-  await page.getByRole('button', { name: '購物功能列', exact: true }).click();
-  await expect(page.getByText('把靈感，帶回家。')).toBeVisible();
+  await page.getByRole('button', { name: '查看相關產品', exact: true }).click();
+  await expect(page.getByRole('heading', { name: '相關產品及優惠' })).toBeVisible();
   await expect(page.locator('.paper').first()).toHaveAttribute('data-page', '3');
-  await page.getByRole('button', { name: '上一頁' }).click();
   await page.screenshot({ path: 'qa/viewer-panel.png', fullPage: true });
   await page.setViewportSize({ width: 768, height: 1024 });
   await expect(page.locator('.viewer')).toHaveClass(/portrait/);
-  await expect(page.locator('.paper')).toHaveCount(1);
-  await page.getByRole('button', { name: '收起購物功能列' }).click();
-  await expect(page.locator('.paper')).toHaveAttribute('data-page', '1');
+  await expect(page.locator('.reader-area')).toBeHidden();
+  await page.getByRole('button', { name: '收起相關產品', exact: true }).click();
+  await expect(page.locator('.paper').first()).toHaveAttribute('data-page', '3');
+  await page.getByRole('button', { name: '單頁', exact: true }).click();
   await page.getByRole('button', { name: '下一頁' }).click();
-  await expect(page.locator('.paper')).toHaveAttribute('data-page', '2');
+  await expect(page.locator('.paper')).toHaveAttribute('data-page', '4');
   await page.screenshot({ path: 'qa/viewer-portrait.png', fullPage: true });
   await page.setViewportSize({ width: 1366, height: 1024 });
-  await expect(page.locator('.paper').first()).toHaveAttribute('data-page', '2');
+  await expect(page.locator('.paper')).toHaveCount(1);
+  await page.getByRole('button', { name: '雙頁', exact: true }).click();
+  await expect(page.locator('.paper').first()).toHaveAttribute('data-page', '4');
   await expect(page.locator('.paper')).toHaveCount(2);
   await page.getByRole('button', { name: '返回目錄' }).click();
   await expect(page).toHaveURL(/folder=unit-a$/);
+});
+test('viewer keeps keyboard focus inside and returns it to the opened result', async ({ page }) => {
+  await page.goto('/?q=RIVO');
+  const result = page.getByRole('button', { name: /小空間，大可能.*開啟展示/ });
+  await result.focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('button', { name: '返回目錄' })).toBeFocused();
+  await page.keyboard.press('Shift+Tab');
+  await expect(page.getByRole('button', { name: '放大' })).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(page.getByRole('button', { name: '返回目錄' })).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(result).toBeFocused();
 });
 test('CMS selects descendant destination, uploads, previews, publishes and unpublishes', async ({
   page,
@@ -80,6 +109,8 @@ test('CMS selects descendant destination, uploads, previews, publishes and unpub
     await expect(
       page.getByRole('button', { name: new RegExp(`^移除第 ${index} 張：`) }),
     ).toBeEnabled();
+    if (index === 2) await expect(page.getByRole('button', { name: '發布內容' })).toBeDisabled();
+    if (index === 1) await expect(page.getByRole('button', { name: '發布內容' })).toBeEnabled();
   }
   await expect(page.getByRole('button', { name: '發布內容' })).toBeEnabled();
   await page.getByLabel('關鍵字', { exact: true }).fill('QA驗收');
@@ -140,8 +171,43 @@ test('API rejects cross-origin writes and sibling upload destinations', async ({
     data: { entity: 'content', payload: content, originFolder: 'estate-a' },
   });
   expect(wrong.status()).toBe(400);
+  const missingEffect = await request.post('/api/save', {
+    headers: { Origin: 'http://127.0.0.1:3000' },
+    data: {
+      entity: 'content',
+      originFolder: 'estate-a',
+      payload: {
+        ...data.contents.find((c: { id: string }) => c.id === 'kit-a'),
+        id: `qa-incomplete-${Date.now()}`,
+        folderId: 'unit-a',
+        status: 'published',
+        files: ['/demo/sales-kit-floorplan.svg', '', '', '', ''],
+      },
+    },
+  });
+  expect(missingEffect.status()).toBe(400);
+  expect(JSON.stringify(await missingEffect.json())).toContain('平面圖及效果圖');
   const search = await request.get('/api/catalog?folder=estate-a&q=橡木');
   expect((await search.json()).contents).toEqual([]);
+});
+test('CMS warns before discarding unsaved content and keeps the edits if cancelled', async ({ page }) => {
+  await page.goto('/?folder=housing&cms=1');
+  await unlockCms(page);
+  await page.getByRole('button', { name: '上載內容' }).click();
+  const name = page.getByLabel('顯示名稱', { exact: false });
+  await name.fill('尚未儲存');
+  page.once('dialog', async (dialog) => {
+    expect(dialog.message()).toContain('未儲存');
+    await dialog.dismiss();
+  });
+  await page.getByRole('button', { name: '取消', exact: true }).click();
+  await expect(name).toHaveValue('尚未儲存');
+  page.once('dialog', async (dialog) => {
+    expect(dialog.message()).toContain('未儲存');
+    await dialog.accept();
+  });
+  await page.getByRole('button', { name: '關閉', exact: true }).click();
+  await expect(name).toHaveCount(0);
 });
 test('mobile and tablet layouts do not overflow; scenes show six configured entries', async ({
   page,

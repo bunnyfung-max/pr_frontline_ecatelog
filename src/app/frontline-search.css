@@ -10,7 +10,7 @@
 }
 .frontline .topbar {
   height: 56px;
-  padding: 0 max(24px, calc((100vw - 720px) / 2));
+  padding: 0 max(24px, calc((100vw - 840px) / 2));
   border: 0;
   background: transparent;
 }
@@ -57,7 +57,7 @@
 }
 .frontline .main {
   width: 100%;
-  max-width: 720px;
+  max-width: 840px;
   margin: 0 auto;
   padding: 0 24px 48px;
 }
@@ -119,7 +119,7 @@
   flex-shrink: 0;
   color: #9aa0a6;
 }
-.directory-search input:not([type='checkbox']):not([type='file']) {
+.directory-search input:not([type="checkbox"]):not([type="file"]) {
   flex: 1 1 auto;
   min-width: 0;
   border: 0;
@@ -185,7 +185,9 @@
   font-size: 15px;
   font-weight: 600;
   white-space: nowrap;
-  transition: background 0.15s ease, transform 0.1s ease;
+  transition:
+    background 0.15s ease,
+    transform 0.1s ease;
 }
 .directory-search .search-submit:hover {
   background: var(--pr-orange-hover);
@@ -203,6 +205,7 @@
   margin-top: 18px;
 }
 .search-chip {
+  min-height: 44px;
   padding: 8px 16px;
   border-radius: 999px;
   background: #f1f3f4;
@@ -480,7 +483,7 @@ a.directory-entry:hover {
   gap: 4px;
   font-size: 13px;
 }
-.frontline .breadcrumb button[aria-current='page'] {
+.frontline .breadcrumb button[aria-current="page"] {
   color: var(--ink);
   font-weight: 500;
 }
@@ -617,8 +620,8 @@ a.directory-entry:hover {
   box-shadow: 0 1px 4px rgba(32, 33, 36, 0.06);
 }
 .search-thumbnail {
-  width: 56px;
-  height: 64px;
+  width: 88px;
+  height: 104px;
   flex-shrink: 0;
   overflow: hidden;
   background: #f1f3f4;
@@ -638,14 +641,14 @@ a.directory-entry:hover {
 }
 .search-content-copy small {
   display: block;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
 }
 .search-content-copy strong,
 .search-content-copy h3 {
   display: block;
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 16px;
+  font-weight: 600;
   line-height: 1.4;
   margin: 2px 0;
 }
@@ -677,6 +680,23 @@ a.directory-entry:hover {
   background: #fff;
 }
 
+/* The Redmi landscape viewport is short: keep the catalogue visible on entry. */
+@media (min-width: 651px) and (max-height: 700px) {
+  .search-home .search-hero {
+    padding: 24px 0 16px;
+  }
+  .search-home .search-intro {
+    margin-bottom: 16px;
+  }
+  .search-chips {
+    margin-top: 10px;
+  }
+  .search-home .browse-directories {
+    margin-top: 8px;
+    padding-top: 18px;
+  }
+}
+
 @media (max-width: 650px) {
   .frontline .topbar {
     height: 52px;
@@ -693,7 +713,7 @@ a.directory-entry:hover {
     padding: 4px 4px 4px 14px;
     gap: 8px;
   }
-  .directory-search input:not([type='checkbox']):not([type='file']) {
+  .directory-search input:not([type="checkbox"]):not([type="file"]) {
     font-size: 16px;
   }
   .directory-search .search-submit {
@@ -711,6 +731,10 @@ a.directory-entry:hover {
   }
   .directory-grid {
     grid-template-columns: 1fr;
+  }
+  .search-thumbnail {
+    width: 72px;
+    height: 88px;
   }
 }
 @media (max-width: 360px) {

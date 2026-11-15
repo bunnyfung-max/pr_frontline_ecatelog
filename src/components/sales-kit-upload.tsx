@@ -38,6 +38,7 @@ export function SalesKitUpload({
   onBusy,
   onError,
   legacy,
+  requiredCount,
 }: {
   value: Content;
   setValue: React.Dispatch<React.SetStateAction<Content>>;
@@ -45,6 +46,7 @@ export function SalesKitUpload({
   onBusy: (busy: boolean) => void;
   onError: (message: string) => void;
   legacy: boolean;
+  requiredCount: number;
 }) {
   const locked = useRef(false);
   const [progress, setProgress] = useState('');
@@ -92,11 +94,16 @@ export function SalesKitUpload({
     <section className="kit-upload" aria-label="Sales Kit 檔案及展示次序">
       <div className="kit-upload-heading">
         <h3>Sales Kit 展示次序</h3>
-        <p>平面圖發布時必填；效果圖及產品列表位置選填。前端依下列次序展示。</p>
+        <p>
+          {requiredCount === 2
+            ? '平面圖及效果圖發布時必填；產品列表及補充圖片選填。'
+            : '平面圖發布時必填；其餘位置選填。'}
+          前端依下列次序展示。
+        </p>
       </div>
       {legacy && (
         <p className="notice">
-          原有圖片暫按舊次序放入下列位置，請核對用途並補齊平面圖。儲存前不會改動原有內容。
+          原有圖片暫按舊次序放入下列位置，請核對用途及必填位置。儲存前不會改動原有內容。
         </p>
       )}
       <ol className="kit-slots">
@@ -109,7 +116,7 @@ export function SalesKitUpload({
             <div className="kit-slot-body">
               <strong>{label}</strong>
               <small>
-                {i === 0
+                {i < requiredCount
                   ? '發布時必填 · 固定位置'
                   : i < KIT_RESERVED - 1
                     ? '選填 · 固定位置'

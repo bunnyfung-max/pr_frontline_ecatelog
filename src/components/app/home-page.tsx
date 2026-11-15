@@ -39,7 +39,7 @@ export function HomePage({
     <>
       <div className="section-heading">
         <div>
-          <h2>選擇管理目錄</h2>
+          <h1>選擇管理目錄</h1>
           <p>{roots.length} 個主目錄入口，一站取閱。</p>
         </div>
         <div className="section-heading-actions">
@@ -76,6 +76,7 @@ export function HomePage({
               index={i}
               icon={Icon}
               tone={i}
+              headingLevel={2}
               onOpen={() => navigate(f.id, true)}
               onDelete={() => requestDelete(f, true)}
               deleteTitle={

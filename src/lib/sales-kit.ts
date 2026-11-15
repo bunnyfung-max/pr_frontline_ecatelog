@@ -9,13 +9,14 @@ export const KIT_SLOTS = [
 ] as const;
 export const KIT_PREVIEW_LABELS = [
   '平面圖',
-  '效果圖1',
-  '效果圖2',
-  '產品圖1',
-  '產品圖2',
+  '效果圖',
+  '產品列表（一）',
+  '產品列表（二）',
+  '補充圖片',
 ] as const;
 export const KIT_RESERVED = KIT_SLOTS.length;
 export const KIT_REQUIRED = 1;
+export const HOUSING_KIT_REQUIRED = 2;
 export const MAX_KIT_FILES = 40;
 export { IMAGE_MIMES, KIT_MIMES } from './upload-policy';
 
@@ -45,8 +46,20 @@ export function moveKitExtra(files: string[], index: number, direction: -1 | 1):
   [result[index], result[target]] = [result[target], result[index]];
   return result;
 }
-export function kitComplete(files: string[]): boolean {
-  return Array.from({ length: KIT_REQUIRED }, (_, i) => !!files[i]).every(Boolean);
+export function kitComplete(files: string[], required = KIT_REQUIRED): boolean {
+  return Array.from({ length: required }, (_, i) => !!files[i]).every(Boolean);
+}
+
+// Only New Housing kits have the additional effect-image requirement.  This
+// is checked at save time so existing published content remains untouched.
+export function housingKitPublishError(
+  content: Pick<Content, 'salesKit' | 'status' | 'files'>,
+  isHousing: boolean,
+): string | null {
+  return isHousing && content.salesKit && content.status === 'published' &&
+    !kitComplete(content.files, HOUSING_KIT_REQUIRED)
+    ? '發布 New Housing Sales Kit 前請上載平面圖及效果圖。'
+    : null;
 }
 export function fileKind(ref: string): ContentType {
   if (/^https?:\/\//i.test(ref)) return 'link';

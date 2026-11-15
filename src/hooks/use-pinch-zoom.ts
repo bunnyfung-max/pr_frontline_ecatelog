@@ -64,5 +64,5 @@ export function usePinchZoom(resetKey: number | string) {
     };
   }, [applyScale]);
 
-  return { scale, targetRef };
+  return { scale, setScale: applyScale, targetRef };
 }

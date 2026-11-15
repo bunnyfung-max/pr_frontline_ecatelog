@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   UploadCloud,
   X,
@@ -24,7 +24,7 @@ import { matchesUploadMime } from '@/lib/storage/validate-client';
 import { Modal, Thumb } from '../ui';
 import { Viewer } from '../viewer';
 import { SalesKitUpload } from '../sales-kit-upload';
-import { fileKind, kitFiles, kitComplete } from '@/lib/sales-kit';
+import { fileKind, kitFiles, kitComplete, KIT_REQUIRED, HOUSING_KIT_REQUIRED } from '@/lib/sales-kit';
 import { prefetchContent } from '@/lib/content-prefetch';
 import { makeId } from './utils';
 import { TagField } from './fields/tag-field';
@@ -79,6 +79,26 @@ export function ContentEditor({
   const [error, setError] = useState('');
   const [uploading, setUploading] = useState(false);
   const [preview, setPreview] = useState<'landscape' | 'portrait' | null>(null);
+  const [initialSnapshot] = useState(() => JSON.stringify(value));
+  const dirty = JSON.stringify(value) !== initialSnapshot;
+  const requiredCount = trail(data.folders, value.folderId).some((folder) => folder.id === 'housing')
+    ? HOUSING_KIT_REQUIRED
+    : KIT_REQUIRED;
+  const kitReady = !value.salesKit || kitComplete(value.files, requiredCount);
+  useEffect(() => {
+    if (!dirty) return;
+    const warn = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [dirty]);
+  const requestClose = () => {
+    if (busy || uploading) return;
+    if (dirty && !window.confirm('有未儲存的變更。要放棄變更並關閉嗎？')) return;
+    close();
+  };
   const destinations = descendants(data.folders, folderId);
   const update = <K extends keyof Content>(key: K, v: Content[K]) =>
     setValue((old) => ({ ...old, [key]: v }));
@@ -123,9 +143,7 @@ export function ContentEditor({
   return (
     <Modal
       title={content ? '編輯展示內容' : '上載展示內容'}
-      close={() => {
-        if (!busy && !uploading) close();
-      }}
+      close={requestClose}
       dismissible={false}
       wide
     >
@@ -219,6 +237,7 @@ export function ContentEditor({
                   onBusy={setUploading}
                   onError={setError}
                   legacy={!!content && !content.salesKit && content.type === 'image'}
+                  requiredCount={requiredCount}
                 />
               ) : value.type === 'link' ? (
                 <label>
@@ -411,6 +430,7 @@ export function ContentEditor({
                     <option value="published">已發布</option>
                     <option value="archived">已下架</option>
                   </select>
+                  <small>「儲存草稿」會設為草稿；「發布內容」會設為已發布。選擇已下架可儲存並下架。</small>
                 </label>
               </div>
               <div className="preview-box">
@@ -443,11 +463,15 @@ export function ContentEditor({
           </p>
         )}
         <div className="modal-actions">
-          <button type="button" className="subtle" disabled={busy || uploading} onClick={close}>
+          <button type="button" className="subtle" disabled={busy || uploading} onClick={requestClose}>
             取消
           </button>
           <span className="muted">
-            {uploading ? '素材上載中…' : '草稿及下架內容不會出現在前端'}
+            {uploading
+              ? '素材上載中…'
+              : !kitReady && requiredCount === HOUSING_KIT_REQUIRED
+                ? '發布前請上載平面圖及效果圖；可先儲存草稿。'
+                : '草稿及下架內容不會出現在前端'}
           </span>
           <button
             className="secondary"
@@ -464,7 +488,7 @@ export function ContentEditor({
               busy ||
               uploading ||
               !value.files.some(Boolean) ||
-              (value.salesKit && !kitComplete(value.files))
+              !kitReady
             }
           >
             <Check size={17} />
