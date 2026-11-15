@@ -33,6 +33,7 @@ import { ContentThumb } from "./content-thumb";
 import { prefetchContent } from "@/lib/content-prefetch";
 import { ShowcaseLibrary, type LibraryRequest } from "./showcase-sheets";
 import { EmptyState } from "./empty-state";
+import { clearLibraryReturn, loadLibraryReturn, saveLibraryReturn, type LibraryViewState } from "@/lib/library-return-state";
 
 function folioTone(id: string) {
   if (id === "tmf" || id.startsWith("tmf-")) return "apricot";
@@ -142,6 +143,7 @@ export function FrontlineBrowser({
   const [library, setLibrary] = useState<LibraryRequest | null>(() =>
     !folder && query.trim() ? { mode: "search", query } : null,
   );
+  const [restoredView, setRestoredView] = useState<LibraryViewState | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const pendingQueryRef = useRef<string | null>(null);
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -173,6 +175,12 @@ export function FrontlineBrowser({
     setSearchText(query);
     if (home) setLibrary((current) => query.trim() ? { mode: "search", query } : current?.mode === 'search' ? null : current);
   }, [query, home]);
+  useEffect(() => {
+    try {
+      const view = loadLibraryReturn(window.sessionStorage, window.location.search);
+      if (view) { setRestoredView(view); setLibrary(view.request); }
+    } catch { /* Storage may be disabled; normal navigation remains available. */ }
+  }, []);
   useEffect(() => {
     const restoreFromHistory = () => {
       searchGenerationRef.current += 1;
@@ -661,15 +669,22 @@ export function FrontlineBrowser({
       )}
       {library && (
         <ShowcaseLibrary
+          key={restoredView ? 'restored' : 'current'}
           data={data}
           request={library}
+          initialView={restoredView}
           suspended={suspended}
           onClose={() => {
             setLibrary(null);
+            setRestoredView(null);
+            try { clearLibraryReturn(window.sessionStorage); } catch { /* Storage is optional. */ }
             if (home && query) publishSearch("");
           }}
           onNavigate={navigate}
-          onOpen={open}
+          onOpen={(content, view) => {
+            try { saveLibraryReturn(window.sessionStorage, window.location.search, content.id, view); } catch { /* Storage is optional. */ }
+            open(content);
+          }}
           onScope={(scope) => setLibrary({ mode: "scope", scope })}
           onSearch={(next) => { if (next === query) setLibrary({ mode: "search", query: next }); publishSearch(next); }}
         />

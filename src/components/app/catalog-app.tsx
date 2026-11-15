@@ -30,6 +30,7 @@ import {
 import { api } from '@/lib/client';
 import { prefetchContent } from '@/lib/content-prefetch';
 import { switchedContentUrl } from '@/lib/catalog-navigation';
+import { switchLibraryReturn } from '@/lib/library-return-state';
 import { useCatalogSession } from '@/hooks/use-catalog-session';
 import { useCatalogData } from '@/hooks/use-catalog-data';
 import { FolderCacheButton } from '../folder-cache-button';
@@ -138,6 +139,7 @@ export function CatalogApp() {
   const openContent = useCallback((id: string) => {
     const item = data?.contents.find((entry) => entry.id === id);
     if (!item) return;
+    try { switchLibraryReturn(window.sessionStorage, window.location.search, id); } catch { /* Storage is optional. */ }
     setActiveContentId(id);
     router.replace(switchedContentUrl(window.location.search, id), { scroll: false });
   }, [data, router]);

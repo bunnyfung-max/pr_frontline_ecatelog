@@ -12,6 +12,18 @@ function render(data: Catalog, request: LibraryRequest) {
   }));
 }
 
+test('a restored directory opens at its previous child and search text', () => {
+  const request: LibraryRequest = { mode: 'directory', folderId: 'housing' };
+  const html = renderToStaticMarkup(createElement(ShowcaseLibrary, {
+    data: initialCatalog(true), request,
+    initialView: { request, childId: 'public', directoryQuery: 'Type A', scopeQuery: '', selectedValue: '', searchInput: '' },
+    onClose: () => {}, onNavigate: () => {}, onOpen: () => {}, onScope: () => {},
+  }));
+  assert.match(html, /value="Type A"/);
+  assert.match(html, /Type A/);
+  assert.doesNotMatch(html, /Type B1/);
+});
+
 test('directory dialog includes root and descendant publications while retaining all folder tabs', () => {
   const data = initialCatalog(true);
   const template = data.contents.find((item) => item.id === 'kit-a')!;

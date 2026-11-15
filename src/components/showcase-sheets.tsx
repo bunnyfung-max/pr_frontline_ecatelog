@@ -39,11 +39,9 @@ import { prefetchContent } from "@/lib/content-prefetch";
 import { ContentShoppingLinks } from "./shopping-links";
 import { estateNamesForFolder } from "@/lib/housing-estate";
 import { EmptyState } from "./empty-state";
+import type { LibraryRequest, LibraryViewState } from "@/lib/library-return-state";
 
-export type LibraryRequest =
-  | { mode: "directory"; folderId: string }
-  | { mode: "scope"; scope: SearchCategory }
-  | { mode: "search"; query: string };
+export type { LibraryRequest } from "@/lib/library-return-state";
 
 const SCOPE_ORDER: SearchCategory[] = [
   "product",
@@ -363,6 +361,7 @@ export function ShowcaseLibrary({
   data,
   request,
   suspended = false,
+  initialView,
   onClose,
   onNavigate,
   onOpen,
@@ -372,18 +371,24 @@ export function ShowcaseLibrary({
   data: Catalog;
   request: LibraryRequest;
   suspended?: boolean;
+  initialView?: LibraryViewState | null;
   onClose: () => void;
   onNavigate: (folderId: string) => void;
-  onOpen: (content: Content) => void;
+  onOpen: (content: Content, view: LibraryViewState) => void;
   onScope: (scope: SearchCategory) => void;
   onSearch?: (query: string) => void;
 }) {
   const dialog = useDialog(onClose, suspended);
-  const [directoryQuery, setDirectoryQuery] = useState("");
-  const [scopeQuery, setScopeQuery] = useState("");
-  const [selectedValue, setSelectedValue] = useState("");
-  const [searchInput, setSearchInput] = useState(request.mode === "search" ? request.query : "");
-  useEffect(() => { if (request.mode === "search") setSearchInput(request.query); }, [request]);
+  const [directoryQuery, setDirectoryQuery] = useState(initialView?.directoryQuery ?? "");
+  const [scopeQuery, setScopeQuery] = useState(initialView?.scopeQuery ?? "");
+  const [selectedValue, setSelectedValue] = useState(initialView?.selectedValue ?? "");
+  const [searchInput, setSearchInput] = useState(initialView?.searchInput ?? (request.mode === "search" ? request.query : ""));
+  const previousSearch = useRef(request.mode === "search" ? request.query : null);
+  useEffect(() => {
+    const next = request.mode === "search" ? request.query : null;
+    if (next !== previousSearch.current && next !== null) setSearchInput(next);
+    previousSearch.current = next;
+  }, [request]);
   const folder =
     request.mode === "directory"
       ? data.folders.find((item) => item.id === request.folderId)
@@ -397,7 +402,7 @@ export function ShowcaseLibrary({
         : [],
     [data.folders, folder],
   );
-  const [childId, setChildId] = useState("");
+  const [childId, setChildId] = useState(initialView?.childId ?? "");
   const activeFolder =
     data.folders.find(
       (item) =>
@@ -510,7 +515,7 @@ export function ShowcaseLibrary({
   };
 
   const openContent = (content: Content) => {
-    onOpen(content);
+    onOpen(content, { request, childId, directoryQuery, scopeQuery, selectedValue, searchInput });
   };
 
   return (
