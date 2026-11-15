@@ -1,0 +1,36 @@
+/* Use one frame for the frontline content browsers and reader sheets. */
+.ecat #library-dialog[open][data-mode],
+.ecat .viewer.viewer-shell #browse[open][data-sheet],
+.ecat .viewer.viewer-shell #furniture[open][data-sheet],
+.ecat .viewer.viewer-shell #image-dialog[open][data-sheet],
+dialog.modal[open] {
+  position: fixed;
+  inset: 24px 40px;
+  width: auto;
+  height: auto;
+  min-width: 0;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  transform: none;
+  animation: none;
+}
+
+/* Keep short forms and confirmations readable within the same outer frame. */
+dialog.modal[open]:not(.wide) > form,
+dialog.modal[open]:not(.wide) > .form-body,
+dialog.modal[open]:not(.wide) > .modal-actions {
+  max-width: 570px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+@media (max-width: 700px) {
+  .ecat #library-dialog[open][data-mode],
+  .ecat .viewer.viewer-shell #browse[open][data-sheet],
+  .ecat .viewer.viewer-shell #furniture[open][data-sheet],
+  .ecat .viewer.viewer-shell #image-dialog[open][data-sheet],
+  dialog.modal[open] {
+    inset: 10px;
+  }
+}

@@ -141,3 +141,119 @@
     font-size: 12px;
   }
 }
+
+/* Match the homepage directory cards in the reader's unit picker. */
+.ecat #browse[data-sheet='browse'] .case-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  padding: 0 30px 30px;
+}
+
+.ecat #browse[data-sheet='browse'] .case-grid .case-card {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  min-width: 0;
+  min-height: 342px;
+  padding: 11px;
+  border: 0;
+  border-radius: 21px;
+  background: #fff;
+  box-shadow: 0 7px 22px #3948360d;
+}
+
+.ecat #browse[data-sheet='browse'] .case-grid .case-card:hover {
+  box-shadow: 0 9px 24px #3948361c;
+  transform: translateY(-3px);
+}
+
+.ecat #browse[data-sheet='browse'] .case-card .case-cover {
+  position: relative;
+  display: block;
+  flex: none;
+  width: 100%;
+  height: 190px;
+  overflow: hidden;
+  border-radius: 14px;
+  background: #f0f3ed;
+}
+
+.ecat #browse[data-sheet='browse'] .case-card .case-cover img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.ecat #browse[data-sheet='browse'] .case-card.plan-only .case-cover img {
+  object-fit: contain;
+}
+
+.ecat #browse[data-sheet='browse'] .case-card .case-badge {
+  top: 10px;
+  left: 10px;
+  padding: 5px 8px;
+  border-radius: 9px;
+  background: #fffffff0;
+  color: #468448;
+  font-size: 10px;
+}
+
+.ecat #browse[data-sheet='browse'] .case-card h3 {
+  min-height: 2.8em;
+  margin: 12px 0 6px;
+  color: #29313c;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.4;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.ecat #browse[data-sheet='browse'] .case-card p {
+  min-height: 0;
+  margin: 0;
+  color: #59655e;
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.ecat #browse[data-sheet='browse'] .case-card .case-go {
+  justify-content: flex-start;
+  gap: 4px;
+  margin: auto 0 0;
+  padding-top: 12px;
+  color: #3b8442;
+  font-size: 13px;
+}
+
+.ecat #browse[data-sheet='browse'] .case-card .case-go svg {
+  width: 13px;
+  height: 13px;
+}
+
+@media (max-width: 900px) {
+  .ecat #browse[data-sheet='browse'] .case-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+}
+
+@media (max-width: 700px) {
+  .ecat #browse[data-sheet='browse'] .case-grid {
+    gap: 10px;
+    padding: 0 18px 22px;
+  }
+
+  .ecat #browse[data-sheet='browse'] .case-grid .case-card {
+    min-height: 265px;
+    padding: 8px;
+  }
+
+  .ecat #browse[data-sheet='browse'] .case-card .case-cover { height: 145px; }
+  .ecat #browse[data-sheet='browse'] .case-card h3 { font-size: 14px; }
+}

@@ -6,6 +6,9 @@ import '../styles/ecat/ecat.css';
 import '../styles/ecat/bridge.css';
 import '../styles/ecat/directory-ux.css';
 import '../components/search-ux.css';
+import '../styles/ecat/popup-size.css';
+import '../components/directory-rail.css';
+import '../styles/ecat/empty-states.css';
 
 const notoSansTC = Noto_Sans_TC({
   subsets: ['latin'],

@@ -29,6 +29,7 @@ import {
 } from '@/lib/catalog';
 import { api } from '@/lib/client';
 import { prefetchContent } from '@/lib/content-prefetch';
+import { switchedContentUrl } from '@/lib/catalog-navigation';
 import { useCatalogSession } from '@/hooks/use-catalog-session';
 import { useCatalogData } from '@/hooks/use-catalog-data';
 import { FolderCacheButton } from '../folder-cache-button';
@@ -138,12 +139,8 @@ export function CatalogApp() {
     const item = data?.contents.find((entry) => entry.id === id);
     if (!item) return;
     setActiveContentId(id);
-    const p = new URLSearchParams();
-    p.set('folder', item.folderId);
-    p.set('content', id);
-    if (cmsMode) p.set('cms', '1');
-    router.replace(`/?${p.toString()}`, { scroll: false });
-  }, [data, router, cmsMode]);
+    router.replace(switchedContentUrl(window.location.search, id), { scroll: false });
+  }, [data, router]);
   const saved = () => {
     setEdit(null);
     setManage('');
@@ -188,7 +185,7 @@ export function CatalogApp() {
   return (
     <div className={cms ? 'cms-root' : 'ecat ecat-root'}>
     <div className={`app-shell ${cms ? 'cms-shell' : 'frontline shell directory-shell'}`}>
-      {!current && <header className="topbar masthead">
+      <header className="topbar masthead" style={current ? { display: 'none' } : undefined}>
         <button className="brand" onClick={() => navigate('', false)}>
           <img className="brand-logo" src="/pricerite-logo.svg" alt="Pricerite 實惠" />
           <span>
@@ -246,13 +243,13 @@ export function CatalogApp() {
             </button>
           )}
         </div>
-      </header>}
+      </header>
       {session.demo && cms && (
         <div className="demo-strip">
           本機示例模式 <span>· 所有屋苑、產品及優惠均為示例，非正式銷售資料</span>
         </div>
       )}
-      {!current && <div className="workspace">
+      <div className="workspace" style={current ? { display: 'none' } : undefined}>
         {cms && (
           <aside className="sidebar">
             <div className="sidebar-scroll">
@@ -330,6 +327,7 @@ export function CatalogApp() {
                     data={data}
                     folder={folder}
                     query={searchQuery}
+                    suspended={Boolean(current)}
                     onSearch={search}
                     navigate={navigate}
                     open={(c) => navigate(folderId, false, c.id)}
@@ -443,7 +441,7 @@ export function CatalogApp() {
             </footer>
           )}
         </main>
-      </div>}
+      </div>
       {data &&
         activeContentId &&
         (current ? (

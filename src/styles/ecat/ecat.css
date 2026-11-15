@@ -784,6 +784,7 @@
 .ecat .scope-symbol{width:28px;height:28px;flex:0 0 28px;border-radius:6px;background:transparent;color:inherit}
 .ecat .scope-chips .scope-symbol img,.ecat .browse-tabs img{width:28px;height:28px;object-fit:contain}
 .ecat .scope-chips button[aria-expanded=true]{background:#67bf63;color:#fff;border:0}
+.ecat .scope-chips button:nth-child(even)[aria-expanded=true]{background:#f48120;color:#fff}
 .ecat .desk-shelf-label{padding:0 16px}
 .ecat .directory-grid{grid-template-rows:270px;height:310px}
 .ecat .desk-baseline{margin-top:20px}
@@ -807,7 +808,7 @@
 .ecat #library-dialog[data-mode=scope] .browse-tabs button{min-width:96px;height:44px;border:0;border-radius:10px;background:#eaf5e5cc;color:#2c712e;font-size:16px;padding:0 16px;gap:4px;white-space:nowrap}
 .ecat #library-dialog[data-mode=scope] .browse-tabs button:nth-child(even){background:#fff0dfcc;color:#7b5324}
 .ecat #library-dialog[data-mode=scope] .browse-tabs button[aria-pressed=true]{background:#68bf63;color:#fff;box-shadow:none}
-.ecat #library-dialog[data-mode=scope] .browse-tabs button:nth-child(2)[aria-pressed=true]{background:#f48120}
+.ecat #library-dialog[data-mode=scope] .browse-tabs button:nth-child(even)[aria-pressed=true]{background:#f48120}
 .ecat #scope-search{width:335px;height:46px;display:flex;align-items:center;gap:6px;padding:3px;border:1px solid #52a74d80;border-radius:26px;flex:0 0 335px}
 .ecat #scope-search>img{width:32px;height:32px;flex:0 0 32px}
 .ecat #scope-search input{min-width:0;flex:1;border:0;outline:none;font-size:14px;background:transparent}

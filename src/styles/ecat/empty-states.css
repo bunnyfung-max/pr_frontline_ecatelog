@@ -1,0 +1,117 @@
+/* Empty states follow the supplied Figma illustration and brand colours. */
+.ecat .frontline-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-height: 300px;
+  padding: 28px 24px;
+  text-align: center;
+  background: linear-gradient(#fff, #f5f5f5);
+}
+
+.ecat .frontline-empty-state .empty-art {
+  display: block;
+  flex: none;
+  width: 206px;
+  height: 128px;
+  margin: 0 auto 32px;
+  object-fit: contain;
+  background: transparent;
+}
+
+/* The search illustration includes transparent padding around its artwork. */
+.ecat .frontline-empty-state .empty-art[src$='empty-search.png'] {
+  transform: scale(2.1);
+  margin-bottom: 58px;
+}
+
+.ecat .frontline-empty-state h3 {
+  margin: 0 0 8px;
+  color: #2c712e;
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: .02em;
+}
+
+.ecat .frontline-empty-state p {
+  max-width: 50em;
+  margin: 0;
+  color: #7b8279;
+  font-size: 18px;
+  line-height: 1.5;
+}
+
+.ecat #library-dialog .frontline-empty-state,
+.ecat .viewer.viewer-shell #browse[data-sheet] .frontline-empty-state {
+  min-height: clamp(300px, calc(100dvh - 345px), 500px);
+  background: transparent;
+}
+
+.ecat #library-dialog:has(.frontline-empty-state),
+.ecat .viewer.viewer-shell #browse[data-sheet]:has(.frontline-empty-state) {
+  background: linear-gradient(#fff, #f5f5f5);
+}
+
+.ecat #library-dialog[data-mode='search']:has(.frontline-empty-state) {
+  background: #f5f5f5;
+}
+
+/* Fill the remaining dialog body so the empty artwork is truly centered. */
+.ecat #library-dialog[open]:has(> .frontline-empty-state) {
+  display: flex;
+  flex-direction: column;
+}
+
+.ecat #library-dialog[open]:has(> .frontline-empty-state) > :not(.frontline-empty-state) {
+  flex-shrink: 0;
+}
+
+.ecat #library-dialog[open] > .frontline-empty-state {
+  flex: 1 0 auto;
+}
+
+/* Search results retain the editable search row requested for this project. */
+.ecat #library-dialog[open][data-mode='search'] > .frontline-empty-state {
+  flex: 0 0 auto;
+}
+
+.ecat #library-dialog[data-mode='scope'] .scope-no-results.frontline-empty-state {
+  grid-column: 1 / -1;
+  min-height: clamp(240px, calc(100dvh - 440px), 420px);
+  padding: 20px 24px;
+}
+
+.ecat .document-list > .frontline-empty-state {
+  grid-column: 1 / -1;
+}
+
+.ecat .search-message.frontline-empty-state {
+  min-height: 300px;
+}
+
+@media (max-width: 700px) {
+  .ecat .frontline-empty-state,
+  .ecat #library-dialog .frontline-empty-state,
+  .ecat .viewer.viewer-shell #browse[data-sheet] .frontline-empty-state,
+  .ecat #library-dialog[data-mode='scope'] .scope-no-results.frontline-empty-state {
+    min-height: 260px;
+    padding: 24px 18px;
+  }
+
+  .ecat .frontline-empty-state .empty-art {
+    width: 160px;
+    height: 100px;
+    margin-bottom: 20px;
+  }
+
+  .ecat .frontline-empty-state .empty-art[src$='empty-search.png'] {
+    transform: scale(1.5);
+    margin-bottom: 30px;
+  }
+
+  .ecat .frontline-empty-state h3 { font-size: 22px; }
+  .ecat .frontline-empty-state p { font-size: 14px; }
+}

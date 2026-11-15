@@ -167,7 +167,7 @@
 .ecat .viewer.viewer-shell .viewer-back-label { display: inline; }
 .ecat .viewer.viewer-shell .viewer-body { display: flex; flex-direction: column; flex: 1; height: auto; min-width: 0; min-height: 0; gap: 10px; position: relative; }
 .ecat .viewer.viewer-shell .source-stage { position: relative; display: block; flex: 1 1 auto; min-height: 0; min-width: 0; overflow: hidden; border-radius: 28px; background: #edf1e9; isolation: isolate; }
-.ecat .viewer.viewer-shell .housing-canvas { position: absolute; inset: 70px 56px 64px; display: flex; align-items: safe center; justify-content: safe center; min-height: 0; overflow: auto; padding: 0; border: 0; border-radius: 0; background: transparent; container-type: size; }
+.ecat .viewer.viewer-shell .housing-canvas { position: absolute; inset: 0; display: flex; align-items: safe center; justify-content: safe center; min-height: 0; overflow: auto; padding: 0; border: 0; border-radius: 0; background: transparent; container-type: size; }
 .ecat .viewer.viewer-shell .page-spread-host { display: flex; flex: 0 0 100%; width: 100%; height: 100%; min-width: 0; }
 .ecat .viewer.viewer-shell .page-spread { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; gap: 12px; max-height: none; }
 .ecat .viewer.viewer-shell .paper,
@@ -197,6 +197,10 @@
 .ecat .viewer.viewer-shell .source-dots button.is-current::after { left: 2px; width: 16px; background: #55b94e; }
 .ecat .viewer.viewer-shell .source-purchase-entry { position: absolute; z-index: 5; right: 20px; bottom: 16px; display: inline-flex; align-items: center; gap: 8px; min-height: 44px; height: 44px; padding: 0 16px; border: 1px solid #efc596; border-radius: 24px; background: #fff1e5; color: #8c4e16; font-size: 13px; }
 .ecat .viewer.viewer-shell .source-purchase-entry > span { display: inline-grid; place-items: center; min-width: 24px; height: 24px; padding: 0 5px; border-radius: 50%; background: #f8e8d8; color: #9b6130; font-size: 12px; }
+/* Keep the overlay controls clear of the browser's video transport controls. */
+.ecat .viewer.viewer-shell .source-stage:has(.reader-video) .source-dots { bottom: 72px; }
+.ecat .viewer.viewer-shell .source-stage:has(.reader-video) .source-purchase-entry { bottom: 72px; }
+.ecat .viewer.viewer-shell.rail-open .source-stage:has(.reader-video) .source-purchase-entry { right: 160px; }
 .ecat .viewer.viewer-shell .is-photograph .housing-canvas { inset: 0; }
 .ecat .viewer.viewer-shell .is-photograph::after { content: ''; position: absolute; inset: 52% 0 0; pointer-events: none; z-index: 1; background: linear-gradient(transparent, #172019a3); }
 .ecat .viewer.viewer-shell .source-caption { position: absolute; left: 26px; bottom: 24px; max-width: 48%; z-index: 3; color: #fff; pointer-events: none; }
@@ -210,7 +214,6 @@
 .ecat .viewer.viewer-shell .housing-rail small { position: static; display: block; margin: 5px 18px 1px 1px; font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ecat .viewer.viewer-shell .housing-rail b { position: absolute; bottom: 7px; right: 8px; color: #77846c; font-size: 10px; font-weight: 400; }
 .ecat .viewer.viewer-shell .showcase-thumb-fallback { display: grid; place-items: center; min-height: 48px; color: #819177; font-size: 12px; }
-.ecat .viewer.viewer-shell.rail-open .housing-canvas { right: 160px; }
 .ecat .viewer.viewer-shell.rail-open .source-arrow-next { right: 156px; }
 .ecat .viewer.viewer-shell .source-dock { display: flex; flex: 0 0 auto; flex-direction: column; align-items: stretch; justify-content: flex-start; height: auto; min-height: 0; max-height: none; gap: 8px; margin: 0; padding: 0; border: 0; background: transparent; }
 .ecat .viewer.viewer-shell .source-dock-main { display: flex; align-items: center; gap: 14px; min-width: 0; }
@@ -288,7 +291,6 @@
   .ecat .viewer.viewer-shell .viewer-back { min-height: 40px; padding: 0 9px; font-size: 11px; }
   .ecat .viewer.viewer-shell .viewer-back svg { display: none; }
   .ecat .viewer.viewer-shell .source-stage { border-radius: 22px; }
-  .ecat .viewer.viewer-shell .housing-canvas { inset: 65px 42px 65px; }
   .ecat .viewer.viewer-shell .source-title { top: 12px; left: 13px; padding: 8px 12px; max-width: calc(100% - 76px); font-size: 12px; }
   .ecat .viewer.viewer-shell .image-expand { top: 12px; right: 12px; width: 40px; height: 40px; min-height: 40px; }
   .ecat .viewer.viewer-shell .source-arrow { width: 40px; min-width: 40px; height: 44px; padding: 8px; }
@@ -310,8 +312,8 @@
   .ecat .viewer.viewer-shell .reader-page-position { margin-right: 5px; }
   .ecat .viewer.viewer-shell .housing-rail { width: 94px; top: 66px; bottom: 62px; right: 8px; }
   .ecat .viewer.viewer-shell .housing-rail img { height: 50px; }
-  .ecat .viewer.viewer-shell.rail-open .housing-canvas { right: 110px; }
   .ecat .viewer.viewer-shell.rail-open .source-arrow-next { right: 104px; }
+  .ecat .viewer.viewer-shell.rail-open .source-stage:has(.reader-video) .source-purchase-entry { right: 110px; }
 }
 @media (max-height: 550px) and (orientation: landscape) {
   .ecat .viewer.viewer-shell { padding: 6px 12px; gap: 5px; }
@@ -321,7 +323,6 @@
   .ecat .viewer.viewer-shell .source-category { height: 48px; }
   .ecat .viewer.viewer-shell .source-category img { height: 36px; width: 34px; flex-basis: 34px; }
   .ecat .viewer.viewer-shell .source-category small { display: none; }
-  .ecat .viewer.viewer-shell .housing-canvas { top: 54px; bottom: 52px; }
   .ecat .viewer.viewer-shell .source-title { top: 7px; }
   .ecat .viewer.viewer-shell .image-expand { top: 7px; }
   .ecat .viewer.viewer-shell .source-purchase-entry { bottom: 7px; }

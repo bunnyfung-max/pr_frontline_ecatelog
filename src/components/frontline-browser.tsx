@@ -32,6 +32,7 @@ import type { SearchCategory } from "@/lib/catalog-search";
 import { ContentThumb } from "./content-thumb";
 import { prefetchContent } from "@/lib/content-prefetch";
 import { ShowcaseLibrary, type LibraryRequest } from "./showcase-sheets";
+import { EmptyState } from "./empty-state";
 
 function folioTone(id: string) {
   if (id === "tmf" || id.startsWith("tmf-")) return "apricot";
@@ -120,6 +121,7 @@ export function FrontlineBrowser({
   data,
   folder,
   query,
+  suspended = false,
   onSearch,
   navigate,
   open,
@@ -127,6 +129,7 @@ export function FrontlineBrowser({
   data: Catalog;
   folder?: Folder;
   query: string;
+  suspended?: boolean;
   onSearch: (query: string) => void;
   navigate: (id: string) => void;
   open: (content: Content) => void;
@@ -180,13 +183,13 @@ export function FrontlineBrowser({
       setInput(split.term);
       setActiveCategory(split.category);
       setSearchText(historyQuery);
-      if (home) setLibrary(historyQuery.trim() ? { mode: 'search', query: historyQuery } : null);
+      if (home) setLibrary((current) => historyQuery.trim() ? { mode: 'search', query: historyQuery } : current?.mode === 'search' ? null : current);
     };
     window.addEventListener('popstate', restoreFromHistory);
     return () => window.removeEventListener('popstate', restoreFromHistory);
   }, [home]);
   useEffect(() => {
-    if (home) return;
+    if (home || suspended) return;
     const composed = composeSearchQuery(activeCategory, input);
     if (composed === query) {
       setSearchText(composed);
@@ -200,7 +203,7 @@ export function FrontlineBrowser({
     }, 280);
     searchTimerRef.current = timer;
     return () => clearTimeout(timer);
-  }, [input, activeCategory, publishSearch, query, home]);
+  }, [input, activeCategory, publishSearch, query, home, suspended]);
 
   const suggestionCategory =
     activeCategory ?? splitSearchQuery(searchText).category;
@@ -623,13 +626,9 @@ export function FrontlineBrowser({
                 )}
               </>
             ) : (
-              <div className="search-message">
-                <h3>找不到相關內容</h3>
-                <p>
-                  試試較短的關鍵字，例如「梳化」或「米白色」，或點選上方分類查看建議詞。
-                </p>
+              <EmptyState className="search-message" kind="search" title="找不到相關內容" detail="試試較短的關鍵字，例如「梳化」或「米白色」，或點選上方分類查看建議詞。">
                 {!home && <p>搜尋不會擴大至其他目錄。</p>}
-              </div>
+              </EmptyState>
             ))}
         </section>
       ) : (
@@ -649,10 +648,7 @@ export function FrontlineBrowser({
           {sceneList(scenes)}
           {contentList(contents.map((item) => ({ item, reasons: [] })))}
           {!folders.length && !scenes.length && !contents.length && (
-            <div className="search-message">
-              <h3>此目錄暫未有內容</h3>
-              <p>請返回上一層，選擇其他目錄。</p>
-            </div>
+            <EmptyState className="search-message" kind="empty" title="此目錄暫未有內容" detail="請返回上一層，選擇其他目錄。" />
           )}
         </section>
       )}
@@ -667,6 +663,7 @@ export function FrontlineBrowser({
         <ShowcaseLibrary
           data={data}
           request={library}
+          suspended={suspended}
           onClose={() => {
             setLibrary(null);
             if (home && query) publishSearch("");

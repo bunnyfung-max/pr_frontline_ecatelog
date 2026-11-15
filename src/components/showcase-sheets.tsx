@@ -38,6 +38,7 @@ import { contentPreviewRef } from "@/lib/content-display";
 import { prefetchContent } from "@/lib/content-prefetch";
 import { ContentShoppingLinks } from "./shopping-links";
 import { estateNamesForFolder } from "@/lib/housing-estate";
+import { EmptyState } from "./empty-state";
 
 export type LibraryRequest =
   | { mode: "directory"; folderId: string }
@@ -80,14 +81,26 @@ function ScrollStrip({ label, children, directory = false }: { label: string; ch
     update();
     const observer = new ResizeObserver(update);
     observer.observe(node);
-    return () => observer.disconnect();
-  }, [children]);
+    const onWheel = (event: WheelEvent) => {
+      if (!directory || event.ctrlKey || Math.abs(event.deltaX) >= Math.abs(event.deltaY)) return;
+      const factor = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? node.clientWidth : 1;
+      const next = Math.max(0, Math.min(node.scrollWidth - node.clientWidth, node.scrollLeft + event.deltaY * factor));
+      if (Math.abs(next - node.scrollLeft) < 1) return;
+      node.scrollLeft = next;
+      event.preventDefault();
+    };
+    node.addEventListener("wheel", onWheel, { passive: false });
+    return () => {
+      observer.disconnect();
+      node.removeEventListener("wheel", onWheel);
+    };
+  }, [children, directory]);
   const scroll = (direction: number) => ref.current?.scrollBy({ left: direction * Math.max(180, ref.current.clientWidth * 0.7), behavior: "smooth" });
   return (
     <div className={directory ? "directory-tabs-wrap" : "scope-options-wrap"}>
-      <button type="button" className="scope-scroll-arrow" aria-label={`向左查看${label}`} disabled={!edges.before} onClick={() => scroll(-1)}><ChevronLeft size={18} aria-hidden="true" /></button>
+      {!directory && <button type="button" className="scope-scroll-arrow" aria-label={`向左查看${label}`} disabled={!edges.before} onClick={() => scroll(-1)}><ChevronLeft size={18} aria-hidden="true" /></button>}
       <nav className={directory ? "library-tabs housing-folder-tabs" : "browse-options"} aria-label={label} ref={ref} onScroll={update}>{children}</nav>
-      <button type="button" className="scope-scroll-arrow" aria-label={`向右查看${label}`} disabled={!edges.after} onClick={() => scroll(1)}><ChevronRight size={18} aria-hidden="true" /></button>
+      {!directory && <button type="button" className="scope-scroll-arrow" aria-label={`向右查看${label}`} disabled={!edges.after} onClick={() => scroll(1)}><ChevronRight size={18} aria-hidden="true" /></button>}
     </div>
   );
 }
@@ -191,13 +204,20 @@ function CaseCards({
   );
 }
 
-function useDialog(onClose: () => void) {
+function useDialog(onClose: () => void, suspended = false) {
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     const dialog = ref.current;
-    if (!dialog || dialog.open) return;
-    dialog.showModal();
-  }, []);
+    if (!dialog) return;
+    if (suspended) {
+      if (dialog.open) dialog.close();
+    } else if (!dialog.open) {
+      dialog.showModal();
+    }
+    return () => {
+      if (dialog.open) dialog.close();
+    };
+  }, [suspended]);
   return {
     ref,
     onCancel: (event: SyntheticEvent) => {
@@ -342,6 +362,7 @@ function SceneCards({ scenes }: { scenes: Scene[] }) {
 export function ShowcaseLibrary({
   data,
   request,
+  suspended = false,
   onClose,
   onNavigate,
   onOpen,
@@ -350,13 +371,14 @@ export function ShowcaseLibrary({
 }: {
   data: Catalog;
   request: LibraryRequest;
+  suspended?: boolean;
   onClose: () => void;
   onNavigate: (folderId: string) => void;
   onOpen: (content: Content) => void;
   onScope: (scope: SearchCategory) => void;
   onSearch?: (query: string) => void;
 }) {
-  const dialog = useDialog(onClose);
+  const dialog = useDialog(onClose, suspended);
   const [directoryQuery, setDirectoryQuery] = useState("");
   const [scopeQuery, setScopeQuery] = useState("");
   const [selectedValue, setSelectedValue] = useState("");
@@ -488,7 +510,6 @@ export function ShowcaseLibrary({
   };
 
   const openContent = (content: Content) => {
-    onClose();
     onOpen(content);
   };
 
@@ -619,16 +640,14 @@ export function ShowcaseLibrary({
               <SceneCards scenes={directoryScenes} />
             </>
           ) : (
-            <div className="library-empty">
-              <h3>
-                {directoryQuery.trim() ? "沒有相符資料" : "暫無可預覽內容"}
-              </h3>
-              <p>
-                {directoryQuery.trim()
-                  ? "試試屋苑名稱、房型或產品關鍵字。"
-                  : `${folderLabel(activeFolder || folder)}尚未提供展示資料。`}
-              </p>
-            </div>
+            <EmptyState
+              className="library-empty"
+              kind={directoryQuery.trim() ? "search" : "empty"}
+              title={directoryQuery.trim() ? "沒有相符資料" : "暫無可預覽內容"}
+              detail={directoryQuery.trim()
+                ? "試試屋苑名稱、房型或產品關鍵字。"
+                : `${folderLabel(activeFolder || folder)}尚未提供展示資料。`}
+            />
           )}
         </>
       )}
@@ -681,13 +700,7 @@ export function ShowcaseLibrary({
               )}
             </>
           ) : (
-            <div className="library-empty figma-empty search-empty">
-              <div className="empty-search-art" aria-hidden="true">
-                ?
-              </div>
-              <h3>沒有找到相符資料</h3>
-              <p>試試其他產品、品牌或屋苑名稱</p>
-            </div>
+            <EmptyState className="library-empty search-empty" kind="search" title="沒有找到相符資料" detail="試試其他產品、品牌或屋苑名稱" />
           )}
         </>
       )}
@@ -740,15 +753,7 @@ export function ShowcaseLibrary({
             </form>
           </div>
           {options.length === 0 && !scopeQuery.trim() ? (
-            <div className="library-empty figma-empty">
-              <img
-                className="empty-art"
-                src="/frontline/figma/empty-style.svg"
-                alt=""
-              />
-              <h3>暫未提供{scopeLabel}資料</h3>
-              <p>可先選擇其他分類，查看現有的展示資料</p>
-            </div>
+            <EmptyState className="library-empty" kind="empty" title={`暫未提供${scopeLabel}資料`} detail="可先選擇其他分類，查看現有的展示資料" />
           ) : (
             <>
               <ScrollStrip label={`選擇${scopeLabel}`}>
@@ -795,9 +800,7 @@ export function ShowcaseLibrary({
                   reasons={evidence(scopeResults)}
                 />
               ) : (
-                <p className="scope-no-results">
-                  沒有找到相符的{scopeLabel}資料
-                </p>
+                <EmptyState className="scope-no-results" kind="search" title={`沒有找到相符的${scopeLabel}資料`} />
               )}
             </>
           )}
@@ -981,7 +984,7 @@ export function ShowcaseViewerSheets({
               }}
             />
           ) : (
-            <p className="library-empty">沒有找到相符資料。</p>
+            <EmptyState className="library-empty" kind={query.trim() ? "search" : "empty"} title="沒有找到相符資料。" />
           )}
         </>
       )}
@@ -1028,7 +1031,7 @@ export function ShowcaseViewerSheets({
                 </button>
               ))
             ) : (
-              <p className="library-empty">找不到相符文件。</p>
+              <EmptyState className="library-empty" kind={query.trim() ? "search" : "empty"} title="找不到相符文件。" />
             )}
           </div>
         </>

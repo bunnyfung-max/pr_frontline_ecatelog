@@ -87,4 +87,16 @@ test('global search results provide an editable search field in the dialog', () 
   const html = render(initialCatalog(true), { mode: 'search', query: 'no such thing' });
   assert.match(html, /aria-label="修改搜尋關鍵字"/);
   assert.match(html, /value="no such thing"/);
+  assert.match(html, /src="\/frontline\/figma\/empty-search\.png"/);
+  assert.match(html, /沒有找到相符資料/);
+});
+
+test('an empty style category keeps its search and displays the original Figma illustration', () => {
+  const data = initialCatalog(true);
+  for (const product of data.products) product.style = '';
+  for (const content of data.contents) content.tags = content.tags.filter((tag) => !/簡約|日式|北歐|現代|風格/.test(tag));
+  const html = render(data, { mode: 'scope', scope: 'style' });
+  assert.match(html, /暫未提供風格資料/);
+  assert.match(html, /src="\/frontline\/figma\/empty-style\.svg"/);
+  assert.match(html, /aria-label="搜尋風格"/);
 });

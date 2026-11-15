@@ -1,0 +1,11 @@
+/* Keep the directory tabs touch-scrollable without showing a scrollbar. */
+.ecat #library-dialog[data-mode='directory'] .directory-tabs-wrap .housing-folder-tabs {
+  padding-bottom: 0;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  touch-action: pan-x pan-y;
+}
+
+.ecat #library-dialog[data-mode='directory'] .directory-tabs-wrap .housing-folder-tabs::-webkit-scrollbar {
+  display: none;
+}
