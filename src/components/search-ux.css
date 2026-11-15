@@ -15,11 +15,10 @@
   margin: 0;
   border: 0;
   overflow-x: auto;
-  scrollbar-width: thin;
-  scrollbar-color: #a9bca1 transparent;
+  scrollbar-width: none;
 }
-.ecat #library-dialog[data-mode=scope] .scope-options-wrap .browse-options::-webkit-scrollbar { display: block; height: 5px; }
-.ecat #library-dialog[data-mode=scope] .scope-options-wrap .browse-options::-webkit-scrollbar-thumb { background: #a9bca1; border-radius: 5px; }
+.ecat #library-dialog[data-mode=scope] .scope-options-wrap .browse-options::-webkit-scrollbar { display: none; }
+.ecat #library-dialog[data-mode=scope] .browse-results-head { margin-top: 12px; }
 .ecat #library-dialog .directory-tabs-wrap { flex: 1 1 auto; }
 .ecat #library-dialog .directory-tabs-wrap .housing-folder-tabs { flex: 1 1 auto; min-width: 0; }
 .ecat #library-dialog .scope-scroll-arrow {

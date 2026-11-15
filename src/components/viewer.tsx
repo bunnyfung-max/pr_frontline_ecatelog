@@ -11,6 +11,7 @@ import {
   X,
   ExternalLink,
   Minus,
+  Plus,
   PanelsTopLeft,
 } from 'lucide-react';
 import './viewer-enhancements.css';
@@ -567,7 +568,7 @@ export function Viewer({
                 <div className="zoom-controls" role="group" aria-label="展示內容縮放">
                   <button type="button" className="icon-btn" aria-label="縮小" disabled={scale <= 1} onClick={() => setScale(scale - 0.25)}><Minus size={18} /></button>
                   <button type="button" className="viewer-zoom-reset" onClick={() => setScale(1)} aria-label={`目前縮放 ${Math.round(scale * 100)}%，重設縮放`}>{Math.round(scale * 100)}%</button>
-                  <button type="button" className="icon-btn" aria-label="放大" disabled={scale >= 3} onClick={() => setScale(scale + 0.25)}><Maximize2 size={18} /></button>
+                  <button type="button" className="icon-btn" aria-label="放大" disabled={scale >= 3} onClick={() => setScale(scale + 0.25)}><Plus size={18} /></button>
                 </div>
                 </div>
               </>

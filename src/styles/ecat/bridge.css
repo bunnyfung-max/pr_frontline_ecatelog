@@ -41,6 +41,11 @@
   border-left: 1px solid #ddd;
   padding-left: 12px;
 }
+/* The reader heading already supplies its own separator. */
+.ecat .viewer.viewer-shell .viewer-heading > span {
+  border-left: 0;
+  padding-left: 0;
+}
 .ecat .home-utilities .subtle,
 .ecat .home-utilities .cache-toggle {
   height: 42px;

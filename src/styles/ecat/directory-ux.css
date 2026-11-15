@@ -51,6 +51,28 @@
   background: #eaf5e5;
 }
 
+/* Native buttons centre their contents vertically when a grid row stretches.
+   Anchor card content to the top so covers and titles line up across each row. */
+.ecat #library-dialog .case-grid .case-card {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+}
+
+.ecat #library-dialog .case-grid .case-card .case-cover {
+  flex: none;
+  width: 100%;
+}
+
+.ecat #library-dialog .case-grid .case-card h3 {
+  min-height: 2.8em;
+}
+
+.ecat #library-dialog .case-grid .case-card.plan-only .case-cover img {
+  object-fit: contain;
+}
+
 .ecat #library-dialog[data-mode='directory'] .directory-card {
   height: auto;
   min-height: 342px;
@@ -75,6 +97,8 @@
 
 .ecat #library-dialog[data-mode='directory'] .directory-card .case-go {
   font-size: 13px;
+  margin-top: auto;
+  padding-top: 12px;
 }
 
 /* Match the enlarged category browser and fit deeper paths on a landscape tablet. */
