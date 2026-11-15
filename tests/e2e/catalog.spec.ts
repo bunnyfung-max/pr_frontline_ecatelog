@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { mkdir } from 'node:fs/promises';
-import { unlockCms } from './helpers';
+import { initialCatalog } from '../../src/lib/seed';
 test('five entry points, hierarchy and branch-scoped attribute search', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
@@ -11,15 +11,23 @@ test('five entry points, hierarchy and branch-scoped attribute search', async ({
   await mkdir('qa', { recursive: true });
   await page.screenshot({ path: 'qa/home-desktop.png', fullPage: true });
   await page.getByRole('button', { name: /新屋入伙.*New Housing.*個資料夾/ }).click();
-  await page.getByRole('button', { name: /^私人屋苑 \d+ 個資料夾/ }).click();
-  await page.getByRole('button', { name: /^示例屋苑 A \d+ 個資料夾/ }).click();
+  const library = page.getByRole('dialog', { name: '新屋入伙', exact: true });
+  await library.getByRole('button', { name: '私人屋苑', exact: true }).click();
+  await expect(library).toBeVisible();
+  await library.getByRole('button', { name: '示例屋苑 A', exact: true }).click();
+  await expect(library.getByRole('navigation', { name: '資料夾路徑' })).toContainText('示例屋苑 A');
+  await library.getByRole('searchbox', { name: '在資料夾內搜尋' }).fill('米白色 梳化');
+  await expect(library.locator('.case-card')).toHaveCount(1);
+  await library.getByRole('searchbox', { name: '在資料夾內搜尋' }).fill('DEMO-002');
+  await expect(library.getByRole('heading', { name: '沒有相符資料' })).toBeVisible();
+  await page.goto('/?folder=estate-a');
   await expect(page.getByRole('heading', { name: '示例屋苑 A', exact: true })).toBeVisible();
   await expect(page.locator('.search-bar .scope-tag')).toHaveCount(0);
   await page.getByRole('searchbox', { name: '搜尋此目錄' }).fill('米白色');
   await page.getByRole('button', { name: '搜尋', exact: true }).click();
   await expect(page.getByRole('heading', { name: '小空間，大可能' })).toBeVisible();
   await expect(page.locator('.search-content-entry')).toHaveCount(1);
-  await page.getByRole('searchbox', { name: '搜尋此目錄' }).fill('橡木');
+  await page.getByRole('searchbox', { name: '搜尋此目錄' }).fill('DEMO-002');
   await page.getByRole('button', { name: '搜尋', exact: true }).click();
   await expect(page.getByRole('heading', { name: '找不到相關內容' })).toBeVisible();
   await page.getByRole('searchbox', { name: '搜尋此目錄' }).fill('草稿');
@@ -32,7 +40,7 @@ test('viewer rotates, retains page and panel state, odd final page is single', a
   await expect(page.getByRole('dialog')).toBeVisible();
   await expect(page.getByRole('button', { name: '返回目錄' })).toBeFocused();
   await page.keyboard.press('Shift+Tab');
-  await expect(page.getByRole('button', { name: '放大' })).toBeFocused();
+  await expect(page.getByRole('button', { name: '放大', exact: true })).toBeFocused();
   await page.keyboard.press('Tab');
   await expect(page.getByRole('button', { name: '返回目錄' })).toBeFocused();
   await expect(page.locator('.paper')).toHaveCount(2);
@@ -75,16 +83,17 @@ test('viewer rotates, retains page and panel state, odd final page is single', a
 });
 test('viewer keeps keyboard focus inside and returns it to the opened result', async ({ page }) => {
   await page.goto('/?q=RIVO');
-  const result = page.getByRole('button', { name: /小空間，大可能.*開啟展示/ });
+  const result = page.locator('#library-dialog .case-card').filter({ has: page.getByRole('heading', { name: '小空間，大可能', exact: true }) });
   await result.focus();
   await page.keyboard.press('Enter');
   await expect(page.getByRole('button', { name: '返回目錄' })).toBeFocused();
   await page.keyboard.press('Shift+Tab');
-  await expect(page.getByRole('button', { name: '放大' })).toBeFocused();
+  await expect(page.getByRole('button', { name: '放大', exact: true })).toBeFocused();
   await page.keyboard.press('Tab');
   await expect(page.getByRole('button', { name: '返回目錄' })).toBeFocused();
   await page.keyboard.press('Escape');
-  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.locator('.viewer')).toHaveCount(0);
+  await expect(page.locator('#library-dialog')).toBeVisible();
   await expect(result).toBeFocused();
 });
 test('CMS selects descendant destination, uploads, previews, publishes and unpublishes', async ({
@@ -92,7 +101,7 @@ test('CMS selects descendant destination, uploads, previews, publishes and unpub
 }) => {
   const name = `QA 圖片 ${Date.now()}`;
   await page.goto('/?folder=estate-a&cms=1');
-  await unlockCms(page);
+  await expect(page.locator('.cms-shell')).toBeVisible();
   await page.getByRole('button', { name: '上載內容' }).click();
   const destination = page.getByLabel('上載目的地', { exact: false });
   await expect(destination.locator('option')).toHaveCount(2);
@@ -113,7 +122,7 @@ test('CMS selects descendant destination, uploads, previews, publishes and unpub
     if (index === 1) await expect(page.getByRole('button', { name: '發布內容' })).toBeEnabled();
   }
   await expect(page.getByRole('button', { name: '發布內容' })).toBeEnabled();
-  await page.getByLabel('關鍵字', { exact: true }).fill('QA驗收');
+  await page.getByRole('textbox', { name: /^關鍵字/ }).fill('QA驗收');
   await page.getByRole('button', { name: '直向單頁', exact: true }).click();
   await expect(page.locator('.viewer .paper')).toHaveCount(1);
   await page.getByRole('button', { name: '返回目錄' }).click();
@@ -124,7 +133,7 @@ test('CMS selects descendant destination, uploads, previews, publishes and unpub
   await expect(page.getByRole('heading', { name: '450–550 呎 / 2–3 人' })).toBeVisible();
   await expect(page.getByRole('heading', { name, exact: true })).toHaveCount(0);
   await page.goto('/?folder=unit-a&cms=1');
-  await unlockCms(page);
+  await expect(page.locator('.cms-shell')).toBeVisible();
   await page
     .getByRole('row')
     .filter({ hasText: name })
@@ -135,28 +144,25 @@ test('CMS selects descendant destination, uploads, previews, publishes and unpub
   await page.goto('/?folder=unit-a');
   await expect(page.getByRole('heading', { name, exact: true })).toBeVisible();
   await page.goto('/?folder=unit-a&cms=1');
-  await unlockCms(page);
+  await expect(page.locator('.cms-shell')).toBeVisible();
   await page
     .getByRole('row')
     .filter({ hasText: name })
     .getByRole('button', { name: '編輯' })
     .click();
-  await page.getByRole('combobox', { name: '狀態', exact: true }).selectOption('archived');
+  await page.getByRole('combobox', { name: /^狀態/ }).selectOption('archived');
   await page.getByRole('button', { name: '儲存並下架' }).click();
   await expect(page.getByRole('status')).toBeVisible();
   await page.goto('/?folder=unit-a');
   await expect(page.getByRole('heading', { name: '450–550 呎 / 2–3 人' })).toBeVisible();
   await expect(page.getByRole('heading', { name, exact: true })).toHaveCount(0);
 });
-test('API rejects cross-origin writes and sibling upload destinations', async ({ request }) => {
-  const locked = await request.get('/api/catalog?cms=1');
-  expect(locked.status()).toBe(403);
-  const r = await request.post('/api/session', {
-    headers: { Origin: 'http://127.0.0.1:3000' },
-    data: { action: 'unlock-cms', password: 'Abc123' },
-  });
-  expect(r.ok()).toBeTruthy();
-  const data = await r.json();
+test('API rejects cross-origin writes and sibling upload destinations', async ({ request, baseURL }) => {
+  const session = await request.get('/api/session');
+  expect((await session.json()).session).toMatchObject({ role: 'admin', demo: true });
+  const cms = await request.get('/api/catalog?cms=1');
+  expect(cms.ok()).toBe(true);
+  const data = await cms.json();
   const content = {
     ...data.contents.find((c: { id: string }) => c.id === 'kit-a'),
     id: `qa-invalid-${Date.now()}`,
@@ -167,12 +173,12 @@ test('API rejects cross-origin writes and sibling upload destinations', async ({
   });
   expect(noOrigin.status()).toBe(403);
   const wrong = await request.post('/api/save', {
-    headers: { Origin: 'http://127.0.0.1:3000' },
+    headers: { Origin: new URL(baseURL!).origin },
     data: { entity: 'content', payload: content, originFolder: 'estate-a' },
   });
   expect(wrong.status()).toBe(400);
   const missingEffect = await request.post('/api/save', {
-    headers: { Origin: 'http://127.0.0.1:3000' },
+    headers: { Origin: new URL(baseURL!).origin },
     data: {
       entity: 'content',
       originFolder: 'estate-a',
@@ -187,12 +193,14 @@ test('API rejects cross-origin writes and sibling upload destinations', async ({
   });
   expect(missingEffect.status()).toBe(400);
   expect(JSON.stringify(await missingEffect.json())).toContain('平面圖及效果圖');
-  const search = await request.get('/api/catalog?folder=estate-a&q=橡木');
+  const globalSearch = await request.get('/api/catalog?q=DEMO-002');
+  expect((await globalSearch.json()).contents.some((item: { id: string }) => item.id === 'kit-b')).toBe(true);
+  const search = await request.get('/api/catalog?folder=estate-a&q=DEMO-002');
   expect((await search.json()).contents).toEqual([]);
 });
 test('CMS warns before discarding unsaved content and keeps the edits if cancelled', async ({ page }) => {
   await page.goto('/?folder=housing&cms=1');
-  await unlockCms(page);
+  await expect(page.locator('.cms-shell')).toBeVisible();
   await page.getByRole('button', { name: '上載內容' }).click();
   const name = page.getByLabel('顯示名稱', { exact: false });
   await name.fill('尚未儲存');
@@ -240,30 +248,31 @@ test('homepage searches all roots, retains query after viewing; CMS remains avai
   const search = page.getByRole('searchbox', { name: '搜尋全部銷售資料' });
   await search.fill('米白色 梳化');
   await search.press('Enter');
-  await expect(page.locator('.search-content-entry')).toHaveCount(2);
+  await expect(page.locator('#library-dialog .case-card')).toHaveCount(2);
   await expect(page.getByRole('heading', { name: '小空間，大可能' })).toBeVisible();
   await expect(page.getByRole('heading', { name: '讓日常，多一點舒適' })).toBeVisible();
-  await page.getByRole('button', { name: /小空間，大可能 開啟展示/ }).click();
+  await page.locator('#library-dialog .case-card').filter({ has: page.getByRole('heading', { name: '小空間，大可能', exact: true }) }).click();
   await page.getByRole('dialog').getByRole('button', { name: '返回目錄', exact: true }).click();
   await expect(search).toHaveValue('米白色 梳化');
-  await expect(page.locator('.search-content-entry')).toHaveCount(2);
-  await page.getByRole('button', { name: '清除', exact: true }).click();
+  await expect(page.locator('#library-dialog .case-card')).toHaveCount(2);
+  await page.getByRole('button', { name: '關閉搜尋結果', exact: true }).click();
   await expect(page.locator('.directory-entry')).toHaveCount(5);
   await page.getByRole('button', { name: '內容管理', exact: true }).click();
-  await expect(page.getByRole('heading', { name: '進入內容管理' })).toBeVisible();
-  await unlockCms(page);
+  await expect(page.getByRole('heading', { name: '選擇管理目錄' })).toBeVisible();
+  await expect(page.locator('.cms-shell')).toBeVisible();
   await expect(page.getByRole('heading', { name: '選擇管理目錄' })).toBeVisible();
   await expect(page.locator('.sidebar')).toBeVisible();
   await page.getByRole('button', { name: '返回展示', exact: true }).click();
   await expect(page.getByRole('heading', { name: '想找甚麼銷售資料？' })).toBeVisible();
   await expect(page.locator('.sidebar')).toHaveCount(0);
   await page.getByRole('button', { name: '內容管理', exact: true }).click();
-  await expect(page.getByRole('heading', { name: '進入內容管理' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '選擇管理目錄' })).toBeVisible();
 });
 
 test('PDF uploads and renders two real canvas pages with an odd last page', async ({
   page,
   request,
+  baseURL,
 }) => {
   const objects = [
     '<< /Type /Catalog /Pages 2 0 R >>',
@@ -288,14 +297,18 @@ test('PDF uploads and renders two real canvas pages with an odd last page', asyn
     .map((n) => `${String(n).padStart(10, '0')} 00000 n \n`)
     .join('')}trailer\n<< /Size 9 /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`;
   const uploaded = await request.post('/api/upload', {
-    headers: { Origin: 'http://127.0.0.1:3000' },
+    headers: { Origin: new URL(baseURL!).origin },
     multipart: { file: { name: 'qa.pdf', mimeType: 'application/pdf', buffer: Buffer.from(pdf) } },
   });
-  expect(uploaded.ok()).toBe(true);
+  expect(uploaded.ok(), `upload status ${uploaded.status()}: ${await uploaded.text()}`).toBe(true);
   const { ref } = await uploaded.json();
+  // Warm the asset-access snapshot before this new file is referenced. Once
+  // the catalog changes, access must update immediately in either direction.
+  const assetPath = `/api/asset?ref=${encodeURIComponent(ref)}`;
+  expect((await request.get(assetPath)).status()).toBe(404);
   const id = `qa-pdf-${Date.now()}`;
   const saved = await request.post('/api/save', {
-    headers: { Origin: 'http://127.0.0.1:3000' },
+    headers: { Origin: new URL(baseURL!).origin },
     data: {
       entity: 'content',
       originFolder: 'unit-a',
@@ -318,6 +331,7 @@ test('PDF uploads and renders two real canvas pages with an odd last page', asyn
     },
   });
   expect(saved.ok()).toBe(true);
+  expect((await request.get(assetPath)).status()).toBe(200);
   await page.goto(`/?folder=unit-a&content=${id}`);
   await expect(page.locator('.paper canvas')).toHaveCount(2);
   await expect(page.locator('.paper canvas').first()).toHaveAttribute('width', '640');
@@ -325,13 +339,54 @@ test('PDF uploads and renders two real canvas pages with an odd last page', asyn
   await expect(page.locator('.paper canvas')).toHaveCount(1);
   await expect(page.locator('.paper')).toHaveAttribute('data-page', '3');
   await page.screenshot({ path: 'qa/pdf-last-page.png', fullPage: true });
+  const deleted = await request.post('/api/save', {
+    headers: { Origin: new URL(baseURL!).origin },
+    data: { action: 'delete', entity: 'content', id },
+  });
+  expect(deleted.ok()).toBe(true);
+  expect((await request.get(assetPath)).status()).toBe(404);
 });
 
-test.afterAll(async ({ request }) => {
-  await request.post('/api/session', {
-    headers: { Origin: 'http://127.0.0.1:3000' },
-    data: { action: 'unlock-cms', password: 'Abc123' },
-  });
+test('Back clears home search and cancels a pending folder search', async ({ page }) => {
+  await page.goto('/');
+  const homeSearch = page.getByRole('searchbox', { name: '搜尋全部銷售資料' });
+  await homeSearch.fill('RIVO');
+  await homeSearch.press('Enter');
+  await expect(page.locator('#library-dialog')).toBeVisible();
+  await page.goBack();
+  await expect(page.locator('#library-dialog')).toHaveCount(0);
+  await expect(homeSearch).toHaveValue('');
+  await page.goto('/?folder=estate-a');
+  const folderSearch = page.getByRole('searchbox', { name: '搜尋此目錄' });
+  await folderSearch.fill('米白色');
+  await folderSearch.press('Enter');
+  await expect(page).toHaveURL((url) => url.searchParams.get('q') === '米白色');
+  await folderSearch.fill('DEMO-002');
+  await page.goBack();
+  await expect(folderSearch).toHaveValue('');
+  // Wait beyond the input debounce to prove that its stale navigation is cancelled.
+  await page.waitForTimeout(400);
+  await expect(page).toHaveURL((url) => !url.searchParams.has('q'));
+  await expect(folderSearch).toHaveValue('');
+});
+
+test('selected colour chips keep their exact membership instead of substring matches', async ({ page }) => {
+  const data = initialCatalog(true);
+  data.products[0].colour = '米白色';
+  data.products[1].colour = '白色';
+  data.contents.find((item) => item.id === 'kit-a')!.productIds = [data.products[0].id];
+  data.contents.find((item) => item.id === 'kit-b')!.productIds = [data.products[1].id];
+  await page.route('**/api/catalog*', (route) => route.fulfill({ json: data }));
+  await page.goto('/');
+  await page.getByRole('button', { name: '顏色', exact: true }).click();
+  const library = page.locator('#library-dialog');
+  await library.getByRole('button').filter({ has: page.getByText('白色', { exact: true }) }).click();
+  await expect(library.locator('.case-card')).toHaveCount(1);
+  await expect(library.getByRole('heading', { name: '靈活工作角落', exact: true })).toBeVisible();
+  await expect(library.getByRole('heading', { name: '小空間，大可能', exact: true })).toHaveCount(0);
+});
+
+test.afterAll(async ({ request, baseURL }) => {
   const response = await request.get('/api/catalog?cms=1');
   const data = await response.json();
   // Archive only this suite's explicit QA fixtures; preserve seed and user entries.
@@ -342,7 +397,7 @@ test.afterAll(async ({ request }) => {
       c.status !== 'archived',
   )) {
     await request.post('/api/save', {
-      headers: { Origin: 'http://127.0.0.1:3000' },
+      headers: { Origin: new URL(baseURL!).origin },
       data: {
         entity: 'content',
         originFolder: c.folderId,

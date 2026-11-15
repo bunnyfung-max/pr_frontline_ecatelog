@@ -1,0 +1,119 @@
+/* Directory dialogs: readable names and an obvious, touch-scrollable tab rail. */
+.ecat #library-dialog[data-mode='directory'] .directory-tabs-wrap {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.ecat #library-dialog[data-mode='directory'] .housing-folder-tabs {
+  align-items: center;
+  flex: 1 1 auto;
+  min-width: 0;
+  padding-bottom: 8px;
+  scrollbar-width: thin;
+  scrollbar-color: #8cac82 #eaf0e6;
+  overscroll-behavior-inline: contain;
+}
+
+.ecat #library-dialog[data-mode='directory'] .housing-folder-tabs::-webkit-scrollbar {
+  display: block;
+  height: 6px;
+}
+
+.ecat #library-dialog[data-mode='directory'] .housing-folder-tabs::-webkit-scrollbar-track {
+  border-radius: 6px;
+  background: #eaf0e6;
+}
+
+.ecat #library-dialog[data-mode='directory'] .housing-folder-tabs::-webkit-scrollbar-thumb {
+  border-radius: 6px;
+  background: #8cac82;
+}
+
+.ecat #library-dialog[data-mode='directory'] .library-path,
+.ecat #library-dialog[data-mode='directory'] .library-folder-links {
+  gap: 6px;
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+
+.ecat #library-dialog[data-mode='directory'] .library-path button,
+.ecat #library-dialog[data-mode='directory'] .library-folder-links button {
+  font-size: 14px;
+  color: #435943;
+}
+
+.ecat #library-dialog[data-mode='directory'] .library-path button[aria-current='page'] {
+  font-weight: 600;
+  border-color: #9ac98d;
+  background: #eaf5e5;
+}
+
+.ecat #library-dialog[data-mode='directory'] .directory-card {
+  height: auto;
+  min-height: 342px;
+  overflow: visible;
+}
+
+.ecat #library-dialog[data-mode='directory'] .directory-card h3 {
+  white-space: normal;
+  overflow: visible;
+  overflow-wrap: anywhere;
+  line-height: 1.4;
+}
+
+.ecat #library-dialog[data-mode='directory'] .directory-card p,
+.ecat #library-dialog[data-mode='directory'] .directory-card .scope-card-line {
+  color: #59655e;
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.ecat #library-dialog[data-mode='directory'] .directory-card .case-go {
+  font-size: 13px;
+}
+
+/* Match the enlarged category browser and fit deeper paths on a landscape tablet. */
+@media (min-width: 1101px) and (max-width: 1400px) and (min-height: 741px) and (max-height: 900px) {
+  .ecat #library-dialog[data-mode='directory'] {
+    width: calc(100% - 80px);
+    max-width: none;
+    height: calc(100% - 48px);
+    max-height: calc(100% - 48px);
+  }
+
+  .ecat #library-dialog[data-mode='directory'] .sheet-head {
+    padding-top: 24px;
+    padding-bottom: 8px;
+  }
+
+  .ecat #library-dialog[data-mode='directory'] .directory-toolbar {
+    min-height: 0;
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+
+  .ecat #library-dialog[data-mode='directory'] .library-count {
+    margin-top: 8px;
+    margin-bottom: 8px;
+  }
+}
+
+@media (max-width: 700px) {
+  .ecat #library-dialog[data-mode='directory'] .directory-card {
+    min-height: 265px;
+  }
+
+  .ecat #library-dialog[data-mode='directory'] .directory-card h3 {
+    font-size: 14px;
+  }
+
+  .ecat #library-dialog[data-mode='directory'] .directory-card p,
+  .ecat #library-dialog[data-mode='directory'] .directory-card .scope-card-line {
+    font-size: 12px;
+  }
+}

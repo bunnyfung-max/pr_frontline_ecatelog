@@ -4,38 +4,15 @@ import { readCatalog } from './server';
 import { isCmsUnlocked } from './cms-access';
 import type { Session } from './types';
 
-const TTL_MS = 30_000;
-
-type AccessSnapshot = {
-  allowed: Set<string>;
-  all: Set<string>;
-  expires: number;
-};
-
-let publicSnapshot: AccessSnapshot | null = null;
-let cmsSnapshot: AccessSnapshot | null = null;
-
-async function buildSnapshot(cmsUnlocked: boolean): Promise<AccessSnapshot> {
+export async function getAssetAccess(_session: Session, cmsUnlocked: boolean) {
+  // Access depends on the current catalog, which can change in another worker
+  // or outside this process. A process-local TTL can deny newly published
+  // assets and continue allowing unpublished ones until it expires.
   const raw = await readCatalog();
   return {
     allowed: new Set(allowedAssetRefs(raw, cmsUnlocked)),
     all: new Set(catalogAssetRefs(raw)),
-    expires: Date.now() + TTL_MS,
   };
-}
-
-export async function getAssetAccess(session: Session, cmsUnlocked: boolean) {
-  const snapshot = cmsUnlocked ? cmsSnapshot : publicSnapshot;
-  if (snapshot && snapshot.expires > Date.now()) return snapshot;
-  const next = await buildSnapshot(cmsUnlocked);
-  if (cmsUnlocked) cmsSnapshot = next;
-  else publicSnapshot = next;
-  return next;
-}
-
-export function clearAssetAccessCache() {
-  publicSnapshot = null;
-  cmsSnapshot = null;
 }
 
 export async function resolveAssetAccess(session: Session) {

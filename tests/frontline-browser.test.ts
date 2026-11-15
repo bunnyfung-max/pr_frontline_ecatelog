@@ -23,7 +23,9 @@ test("category deep links preserve the search term and expose the active filter 
   const html = render(initialCatalog(true), undefined, "品牌 RIVO");
   assert.match(html, /aria-pressed="true"[^>]*>品牌<\/button>/);
   assert.match(html, /aria-label="搜尋全部銷售資料"[^>]*value="RIVO"/);
-  assert.doesNotMatch(html, /value="品牌 RIVO"/);
+  // The editable results-dialog field retains the category prefix so its
+  // scope remains explicit when the search is revised.
+  assert.match(html, /aria-label="修改搜尋關鍵字"[^>]*value="品牌 RIVO"/);
 });
 
 test("homepage uses the same five folder cards, retains search and names, and counts active scenes", () => {

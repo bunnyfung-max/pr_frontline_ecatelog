@@ -127,6 +127,15 @@ test('draft asset refs require CMS unlock; published refs stay visible', () => {
   assert.ok(unlocked.includes('asset:draft-only.jpg'));
   assert.ok(unlocked.includes('asset:draft-cover.png'));
 });
+test('unpublishing revokes frontline asset access while retaining admin preview', () => {
+  const d = initialCatalog(true);
+  const item = { ...d.contents[0], id: 'publication-access', status: 'published' as 'published' | 'archived', files: ['asset:publication-only.jpg'], cover: '' };
+  d.contents.push(item);
+  assert.ok(allowedAssetRefs(d, false).includes('asset:publication-only.jpg'));
+  item.status = 'archived';
+  assert.equal(allowedAssetRefs(d, false).includes('asset:publication-only.jpg'), false);
+  assert.ok(allowedAssetRefs(d, true).includes('asset:publication-only.jpg'));
+});
 test('cacheable assets include uploaded refs but skip demo fixtures and external links', () => {
   const d = initialCatalog(true);
   const kit = d.contents.find((c) => c.id === 'kit-a')!;

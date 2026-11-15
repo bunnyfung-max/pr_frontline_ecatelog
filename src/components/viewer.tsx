@@ -2,22 +2,23 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  ArrowLeft,
   ChevronLeft,
   ChevronRight,
-  ShoppingBag,
+  Home,
+  Maximize2,
+  QrCode,
   Tag,
   X,
   ExternalLink,
   Minus,
-  Plus,
+  PanelsTopLeft,
 } from 'lucide-react';
 import './viewer-enhancements.css';
 import type { PDFDocumentProxy } from 'pdfjs-dist';
 import type { Catalog, Content } from '@/lib/types';
-import { activeOffer, byOrder } from '@/lib/catalog';
+import { activeOffer, byOrder, folderLabel, trail } from '@/lib/catalog';
 import { assetUrl } from '@/lib/client';
-import { contentPreviewRef, contentReaderSubtitle } from '@/lib/content-display';
+import { contentPreviewRef } from '@/lib/content-display';
 import {
   FILE_KIND_LABEL,
   readerAssets,
@@ -32,23 +33,48 @@ import { usePinchZoom } from '@/hooks/use-pinch-zoom';
 import { useSwipeNavigation } from '@/hooks/use-swipe-navigation';
 import { preloadPdfJs } from '@/lib/pdfjs-preload';
 import { External, Thumb } from './ui';
-import { ContentShoppingLinks } from './shopping-links';
+import { ContentProductDetail, ContentShoppingLinks, productSelectionKey, useEshopProductPrices, type ProductSelection } from './shopping-links';
 import { EshopQrCode } from './eshop-qr-code';
+import { ShowcaseViewerSheets } from './showcase-sheets';
+
+const SHOWCASE_CORNERS = [
+  { id: 'render', title: '空間效果圖', subtitle: 'Space Renderings' },
+  { id: 'plan', title: '平面配置', subtitle: 'Layout Plan' },
+  { id: 'products', title: '產品資料', subtitle: 'Product Information' },
+  { id: 'full', title: '完整資料', subtitle: 'Full Details' },
+] as const;
+
+function showcaseCornerId(label: string, salesKit: boolean) {
+  if (!salesKit) return 'render';
+  if (label.includes('平面圖')) return 'plan';
+  if (label.includes('產品列表')) return 'products';
+  if (label.includes('補充') || label.includes('額外')) return 'full';
+  return 'render';
+}
+
 export function Viewer({
   content,
   data,
   close,
+  switchFolder,
+  openContent,
   previewOrientation,
 }: {
   content: Content;
   data: Catalog;
   close: () => void;
+  switchFolder?: (folderId: string) => void;
+  openContent?: (contentId: string) => void;
   previewOrientation?: 'landscape' | 'portrait';
 }) {
   const [landscape, setLandscape] = useState(true);
   const [layoutMode, setLayoutMode] = useState<'auto' | 'single' | 'double'>('auto');
   const [page, setPage] = useState(1);
   const [panel, setPanel] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<ProductSelection | null>(null);
+  const eshopPrices = useEshopProductPrices(content.eshopProducts, panel);
+  const [thumbnails, setThumbnails] = useState(false);
+  const [sheet, setSheet] = useState<'browse' | 'documents' | 'furniture' | 'zoom' | null>(null);
   const [pdfs, setPdfs] = useState<Record<string, PDFDocumentProxy>>({});
   const [pdfCounts, setPdfCounts] = useState<Record<string, number>>({});
   const [reload, setReload] = useState(0);
@@ -57,6 +83,8 @@ export function Viewer({
   const dialogRef = useRef<HTMLDivElement>(null);
   const returnButtonRef = useRef<HTMLButtonElement>(null);
   const shoppingButtonRef = useRef<HTMLButtonElement>(null);
+  const panelCloseRef = useRef<HTMLButtonElement>(null);
+  const thumbnailsRef = useRef<HTMLElement>(null);
   closeRef.current = close;
   const assets = useMemo(
     () => readerAssets(content),
@@ -85,11 +113,13 @@ export function Viewer({
     returnButtonRef.current?.focus();
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
+        if (dialogRef.current?.querySelector('dialog[open]')) return;
         event.preventDefault();
         closeRef.current();
         return;
       }
       if (event.key !== 'Tab' || !dialogRef.current) return;
+      if (dialogRef.current.querySelector('dialog[open]')) return;
       const controls = Array.from(dialogRef.current.querySelectorAll<HTMLElement>(
         'button:not(:disabled), a[href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), video[controls], [tabindex]:not([tabindex="-1"])',
       )).filter((el) => el.getClientRects().length > 0 && !el.closest('[inert]'));
@@ -110,6 +140,14 @@ export function Viewer({
       window.removeEventListener('keydown', onKeyDown);
       document.body.style.overflow = previousOverflow;
       if (previousFocus?.isConnected) previousFocus.focus();
+      else requestAnimationFrame(() => {
+        // The directory may be unmounted while the full-screen reader owns
+        // the page. Restore focus to the newly mounted result on close.
+        const result = Array.from(document.querySelectorAll<HTMLElement>('.main .search-content-entry, .main .case-card'))
+          .find((element) => element.textContent?.includes(content.name));
+        const fallback = document.querySelector<HTMLElement>('.main input[type="search"], .main button, .brand');
+        (result ?? fallback)?.focus();
+      });
     };
   }, []);
   useEffect(() => {
@@ -162,13 +200,16 @@ export function Viewer({
     if (!orientationLandscape && panel) {
       const reader = dialogRef.current?.querySelector('.reader-area');
       reader?.querySelectorAll('video').forEach((video) => video.pause());
-      if (reader?.contains(document.activeElement)) shoppingButtonRef.current?.focus();
     }
+    if (panel) panelCloseRef.current?.focus();
   }, [orientationLandscape, panel]);
   const leaves = useMemo(() => readerLeaves(assets, pdfCounts), [assets, pdfCounts]);
   const total = leaves.length;
   const pages = readerSpread(leaves, page, horizontal);
   const current = leaves[pages[0] - 1];
+  useEffect(() => {
+    if (thumbnails) thumbnailsRef.current?.querySelector('[aria-current="page"]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }, [page, thumbnails]);
   useEffect(() => { pageHistory.current = []; }, [leaves]);
   const visiblePdfs = Array.from(new Map(
     pages.map((n) => leaves[n - 1]).filter((leaf) => leaf?.kind === 'pdf' && !leaf.pending && !leaf.failed)
@@ -244,57 +285,99 @@ export function Viewer({
       if (direction === 'previous' && canGoPrevious) goPrevious();
     },
   });
+  const place = trail(data.folders, content.folderId).map(folderLabel);
+  const placeTitle = place.at(-1) || content.name;
+  const currentFolder = data.folders.find((item) => item.id === content.folderId);
+  const units = data.folders
+    .filter((item) => currentFolder && item.parentId === currentFolder.parentId)
+    .sort(byOrder);
+  const linkedCount = (content.eshopProducts?.length ?? 0) + content.productIds.length;
+  const corners = useMemo(() => {
+    const buckets = new Map<string, number[]>();
+    leaves.forEach((leaf, index) => {
+      const id = showcaseCornerId(leaf.label, Boolean(content.salesKit));
+      buckets.set(id, [...(buckets.get(id) ?? []), index]);
+    });
+    return SHOWCASE_CORNERS.map((corner) => {
+      const indexes = buckets.get(corner.id) ?? [];
+      const first = leaves[indexes[0]];
+      return {
+        ...corner,
+        count: indexes.length,
+        page: indexes.length ? indexes[0] + 1 : 0,
+        thumb: first?.kind === 'image' && first.ref ? resolveAssetUrl(first.ref) : '',
+      };
+    }).filter((corner) => content.salesKit || corner.count > 0);
+  }, [leaves, content.salesKit, resolveAssetUrl]);
+  const activeCorner = current ? showcaseCornerId(current.label, Boolean(content.salesKit)) : '';
+  const photograph = pages.length === 1 && current?.kind === 'image' && activeCorner === 'render';
+  const ContentHeading = previewOrientation ? 'h2' : 'h1';
   const handleClose = () => {
     closeRef.current();
   };
   const closePanel = () => {
     setPanel(false);
-    shoppingButtonRef.current?.focus();
+    setSelectedProduct(null);
+    requestAnimationFrame(() => shoppingButtonRef.current?.focus());
+  };
+  const selectProduct = (selection: ProductSelection) => {
+    setSelectedProduct(selection);
+    requestAnimationFrame(() => dialogRef.current?.querySelector('.shopping-panel')?.scrollTo({ top: 0 }));
+  };
+  const returnToProducts = () => {
+    const key = selectedProduct ? productSelectionKey(selectedProduct) : '';
+    setSelectedProduct(null);
+    requestAnimationFrame(() => {
+      const source = Array.from(dialogRef.current?.querySelectorAll<HTMLElement>('[data-product-select]') ?? [])
+        .find((element) => element.dataset.productSelect === key);
+      (source ?? panelCloseRef.current)?.focus();
+    });
   };
   const markup = (
+    <div className="ecat">
     <div
       role="dialog"
       aria-modal="true"
       ref={dialogRef}
       tabIndex={-1}
-      className={`viewer ${orientationLandscape ? 'landscape' : 'portrait'} ${horizontal ? 'spread-double' : 'spread-single'} ${panel ? 'panel-open' : ''} ${previewOrientation ? 'is-preview' : ''}`}
+      className={`viewer shell source-shell viewer-shell ${orientationLandscape ? 'landscape' : 'portrait'} ${horizontal ? 'spread-double' : 'spread-single'} ${panel ? 'panel-open' : ''} ${thumbnails ? 'rail-open' : ''} ${previewOrientation ? 'is-preview' : ''}`}
       aria-label={`${content.name} 閱讀器`}
     >
-      <header className="viewer-top">
-        <button
-          type="button"
-          ref={returnButtonRef}
-          className="subtle viewer-back"
-          onClick={handleClose}
-          aria-label="返回目錄"
-        >
-          <ArrowLeft size={17} />
-          <span className="viewer-back-label">返回</span>
-        </button>
-        <div className="viewer-title">
-          <strong>{content.name}</strong>
-          <small>
-            {previewOrientation
-              ? `預覽 · ${horizontal ? '橫向雙頁' : '直向單頁'}`
-              : contentReaderSubtitle(content, assets, horizontal).replace('橫向雙頁', '雙頁').replace('直向單頁', '單頁')}
-          </small>
+      <header className="viewer-top masthead">
+        <div className="brand showcase-brand">
+          <img src="/pricerite-logo.svg" alt="Pricerite 實惠" />
+          <div className="viewer-heading">
+            <span>家具展示</span>
+            <ContentHeading className="viewer-content-title">{content.name}</ContentHeading>
+          </div>
         </div>
-        <button
-          type="button"
-          className={`shopping-toggle viewer-shop ${panel ? 'selected' : ''}`}
-          ref={shoppingButtonRef}
-          onClick={() => panel ? closePanel() : setPanel(true)}
-          aria-expanded={panel}
-          aria-controls="shopping-panel"
-          aria-label={panel ? '關閉相關產品面板' : '查看相關產品'}
-        >
-          <ShoppingBag size={17} />
-          <span>相關產品</span>
-        </button>
+        <div className="showcase-tools">
+          <button
+            type="button"
+            ref={returnButtonRef}
+            className="subtle viewer-back"
+            onClick={handleClose}
+            aria-label="返回目錄"
+          >
+            <Home size={16} />
+            <span className="viewer-back-label">返回目錄</span>
+          </button>
+          {switchFolder && !previewOrientation && (
+            <button
+              type="button"
+              className="subtle viewer-back"
+              aria-haspopup="dialog"
+              aria-controls="browse"
+              onClick={() => setSheet('browse')}
+            >
+              換個單位
+            </button>
+          )}
+        </div>
       </header>
       <div className="viewer-body">
-        <section className="reader-area" aria-label="展示內容">
-          <div className="reader-scroll reader-pinch" ref={pinchRef}>
+        <section className={`reader-area viewer-stage source-stage housing-viewer${photograph ? ' is-photograph' : ''}`} aria-label="展示內容">
+          <div className="reader-scroll reader-pinch housing-canvas" ref={pinchRef}>
             {current && current.kind !== 'link' ? (
               <div
                 className={`page-spread-host${scale > 1 ? ' is-zoomed' : ''}`}
@@ -348,64 +431,169 @@ export function Viewer({
               <div className="empty">尚未上載檔案。</div>
             )}
           </div>
-          <div className="reader-toolbar">
-            <div className="page-controls">
-              <button
-                className="icon-btn"
-                aria-label="上一頁"
-                disabled={!canGoPrevious}
-                onClick={goPrevious}
-              >
-                <ChevronLeft size={18} />
-              </button>
-              <span aria-live="polite">
-                {pageLoading ? '載入中' : `${pages.join('–') || '0'} / ${total}`}
-              </span>
-              <button
-                className="icon-btn"
-                aria-label="下一頁"
-                disabled={!canGoNext}
-                onClick={goNext}
-              >
-                <ChevronRight size={18} />
-              </button>
+          {current?.kind === 'image' && (
+            <button type="button" className="round image-expand" aria-label="放大檢視圖片" aria-haspopup="dialog" aria-controls="image-dialog" onClick={() => setSheet('zoom')}>
+              <Maximize2 size={18} />
+            </button>
+          )}
+          <div className="source-title">
+            <span>{placeTitle}</span>
+          </div>
+          {leaves.length > 1 && leaves.length <= 12 && (
+            <div className="showcase-dots source-dots" aria-label="頁面位置">
+              {leaves.map((leaf, index) => (
+                <button
+                  key={`${leaf.ref}-dot-${index}`}
+                  type="button"
+                  className={pages.includes(index + 1) ? 'is-current' : ''}
+                  aria-label={`第 ${index + 1} 頁`}
+                  aria-current={pages.includes(index + 1) ? 'page' : undefined}
+                  onClick={() => navigate(index + 1)}
+                />
+              ))}
             </div>
+          )}
+          {thumbnails && leaves.length > 0 && (
+            <aside id="reader-thumbnails" ref={thumbnailsRef} className="showcase-thumbs housing-rail" aria-label="頁面縮圖">
+              {leaves.map((leaf, index) => (
+                <button
+                  key={`${leaf.ref}-${index}`}
+                  type="button"
+                  className={pages.includes(index + 1) ? 'is-current' : ''}
+                  aria-current={pages.includes(index + 1) ? 'page' : undefined}
+                  aria-label={`${leaf.label}，第 ${index + 1} 頁`}
+                  onClick={() => navigate(index + 1)}
+                >
+                  {leaf.kind === 'image' && leaf.ref ? (
+                    <img src={resolveAssetUrl(leaf.ref)} alt="" />
+                  ) : (
+                    <span className="showcase-thumb-fallback">{FILE_KIND_LABEL[leaf.kind]}</span>
+                  )}
+                  <small>{leaf.label.replace(' Floor Plan', '').replace(/（[一二]）/g, '')}</small>
+                  <b>{index + 1}</b>
+                </button>
+              ))}
+              {leaves.length > 3 && <span className="thumbnail-scroll-hint">上下滑動查看更多</span>}
+            </aside>
+          )}
+          <button
+            type="button"
+            className={`shopping-toggle showcase-price pill source-purchase-entry ${panel ? 'selected' : ''}`}
+            ref={shoppingButtonRef}
+            onClick={() => panel ? closePanel() : setPanel(true)}
+            aria-expanded={panel}
+            aria-controls="shopping-panel"
+            aria-label={panel ? '關閉相關產品面板' : '查看相關產品'}
+          >
+            價格與下單
+            <span>{linkedCount}</span>
+          </button>
+          <div className="page-controls">
+            <button
+              className="icon-btn source-arrow source-arrow-prev"
+              aria-label="上一頁"
+              disabled={!canGoPrevious}
+              onClick={goPrevious}
+            >
+              <ChevronLeft size={18} />
+            </button>
+            <span aria-live="polite">
+              {pageLoading ? '載入中' : `${pages.join('–') || '0'} / ${total}`}
+            </span>
+            <button
+              className="icon-btn source-arrow source-arrow-next"
+              aria-label="下一頁"
+              disabled={!canGoNext}
+              onClick={goNext}
+            >
+              <ChevronRight size={18} />
+            </button>
+          </div>
+        </section>
+        <div className="reader-toolbar source-dock">
             {!previewOrientation && (
               <>
-                <div className="viewer-layout-controls" role="group" aria-label="頁面顯示模式">
-                  <button type="button" className="viewer-mode-button" aria-pressed={!horizontal} onClick={() => setLayoutMode('single')}>單頁</button>
-                  <button type="button" className="viewer-mode-button" aria-pressed={horizontal} onClick={() => setLayoutMode('double')}>雙頁</button>
+                <div className="source-dock-main">
+                <p className="showcase-prompt source-dock-intro">
+                  <strong>想看看哪個角落？</strong>
+                  <span>輕點切換，選「單頁」看清細節</span>
+                </p>
+                <div className="showcase-corners source-category-list">
+                  {corners.map((corner) => (
+                    <button
+                      key={corner.id}
+                      type="button"
+                      className={`source-category${activeCorner === corner.id ? ' is-current' : ''}`}
+                      aria-pressed={activeCorner === corner.id}
+                      disabled={!corner.page}
+                      onClick={() => navigate(corner.page)}
+                    >
+                      {corner.id === 'full' ? (
+                        <span className="showcase-corner-qr" aria-hidden="true"><QrCode size={28} /></span>
+                      ) : corner.thumb ? (
+                        <img src={corner.thumb} alt="" />
+                      ) : (
+                        <span className="showcase-thumb-fallback">{corner.count}</span>
+                      )}
+                      <span>
+                        <strong>{corner.title}{corner.count ? ` (${corner.count})` : ''}</strong>
+                        <small>{corner.subtitle}</small>
+                      </span>
+                    </button>
+                  ))}
                 </div>
-                <div className="zoom-controls" role="group" aria-label="展示內容縮放">
-                  <button type="button" className="icon-btn" aria-label="縮小" disabled={scale <= 1} onClick={() => setScale(scale - 0.25)}><Minus size={18} /></button>
-                  <button type="button" className="viewer-zoom-reset" onClick={() => setScale(1)} aria-label={`目前縮放 ${Math.round(scale * 100)}%，重設縮放`}>{Math.round(scale * 100)}%</button>
-                  <button type="button" className="icon-btn" aria-label="放大" disabled={scale >= 3} onClick={() => setScale(scale + 0.25)}><Plus size={18} /></button>
+                {leaves.length > 1 && (
+                  <button type="button" className="round source-thumbnails" aria-label={thumbnails ? '收起頁面縮圖' : '顯示頁面縮圖'} aria-expanded={thumbnails} aria-controls="reader-thumbnails" onClick={() => setThumbnails((value) => !value)}>
+                    <PanelsTopLeft size={22} />
+                  </button>
+                )}
+                </div>
+                <div className="viewer-reader-controls">
+                <span className="reader-page-position" aria-live="polite">{pageLoading ? '載入中' : `第 ${pages.join('–') || '0'} / ${total} 頁`}</span>
+                {leaves.length > 1 && (
+                  <button type="button" className="viewer-mode-button" aria-haspopup="dialog" aria-controls="browse" onClick={() => setSheet('documents')}>
+                    選擇房型文件
+                  </button>
+                )}
+                <div className="viewer-layout-controls" role="group" aria-label="頁面顯示模式">
+                  <button type="button" className="viewer-mode-button viewer-single-page" title="切換至單頁，放大閱讀內容" aria-pressed={!horizontal} onClick={() => setLayoutMode('single')}>單頁</button>
+                  <button type="button" className="viewer-mode-button" aria-pressed={horizontal} onClick={() => setLayoutMode('double')}>雙頁</button>
                 </div>
                 {visiblePdfs.map((pdf) => (
                   <a className="viewer-pdf-link" key={pdf.ref} href={resolveAssetUrl(pdf.ref)} target="_blank" rel="noopener noreferrer">
                     開啟原 PDF{visiblePdfs.length > 1 ? `：${pdf.label}` : ''} <ExternalLink size={14} />
                   </a>
                 ))}
+                <div className="zoom-controls" role="group" aria-label="展示內容縮放">
+                  <button type="button" className="icon-btn" aria-label="縮小" disabled={scale <= 1} onClick={() => setScale(scale - 0.25)}><Minus size={18} /></button>
+                  <button type="button" className="viewer-zoom-reset" onClick={() => setScale(1)} aria-label={`目前縮放 ${Math.round(scale * 100)}%，重設縮放`}>{Math.round(scale * 100)}%</button>
+                  <button type="button" className="icon-btn" aria-label="放大" disabled={scale >= 3} onClick={() => setScale(scale + 0.25)}><Maximize2 size={18} /></button>
+                </div>
+                </div>
               </>
             )}
-          </div>
-        </section>
+        </div>
         {panel && (
           <aside className="shopping-panel" id="shopping-panel">
             <div className="panel-heading">
               <div>
                 <span className="eyebrow">SHOP THE IDEAS</span>
-                <h2>相關產品及優惠</h2>
+                <h2>{selectedProduct ? '產品詳情' : '相關產品及優惠'}</h2>
               </div>
               <button
                 className="icon-btn"
+                ref={panelCloseRef}
                 aria-label="收起相關產品"
                 onClick={closePanel}
               >
                 <X size={21} />
               </button>
             </div>
-            <ContentShoppingLinks content={content} products={data.products} />
+            {selectedProduct ? (
+              <ContentProductDetail content={content} products={data.products} prices={eshopPrices} selection={selectedProduct} onSelect={selectProduct} onBack={returnToProducts} />
+            ) : (
+            <>
+            <ContentShoppingLinks content={content} products={data.products} eshopPrices={eshopPrices} onProductSelect={selectProduct} />
             {activeOffers.length > 0 || contentEshopUrl ? (
               <>
                 <div className="list-title">
@@ -444,9 +632,30 @@ export function Viewer({
                 <span>暫時未有 eShop 組合優惠</span>
               </div>
             )}
+            </>
+            )}
           </aside>
         )}
       </div>
+      {sheet && (
+        <ShowcaseViewerSheets
+          sheet={sheet}
+          onClose={() => setSheet(null)}
+          data={data}
+          content={content}
+          units={units}
+          pages={leaves.map((leaf, index) => ({
+            name: leaf.label,
+            image: leaf.kind === 'image' && leaf.ref ? resolveAssetUrl(leaf.ref) : '',
+            page: index + 1,
+          }))}
+          imageSrc={current?.kind === 'image' && current.ref ? resolveAssetUrl(current.ref) : ''}
+          imageLabel={current?.label || content.name}
+          onOpenContent={(contentId) => openContent?.(contentId)}
+          onSelectPage={(next) => navigate(next)}
+        />
+      )}
+    </div>
     </div>
   );
   if (typeof document === 'undefined') return null;

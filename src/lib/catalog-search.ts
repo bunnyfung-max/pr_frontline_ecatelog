@@ -1,4 +1,5 @@
 import type { Catalog, Content, EshopProductLink, Folder, Product, Scene } from './types';
+import { estateNamesForFolder } from './housing-estate';
 
 const folderLabel = (folder: Folder) =>
   folder.id === 'housing' && folder.name === 'New Housing' ? '新屋入伙' : folder.name;
@@ -221,16 +222,11 @@ export function buildSearchVocabulary(
       styles.push(product.style);
       if (product.keywords) products.push(product.keywords);
     }
-    const path = trail(data.folders, content.folderId);
-    for (const folder of path) {
-      estates.push(folderLabel(folder), folder.name);
-      if (folder.subtitle) estates.push(folder.subtitle);
-    }
+    estates.push(...estateNamesForFolder(data.folders, content.folderId));
   }
 
   for (const folder of data.folders.filter((f) => scope.has(f.id))) {
-    estates.push(folderLabel(folder), folder.name);
-    if (folder.subtitle) estates.push(folder.subtitle);
+    estates.push(...estateNamesForFolder(data.folders, folder.id));
   }
 
   return {
@@ -267,7 +263,7 @@ type FieldHit = {
   label: string;
   value: string;
   weight: number;
-  category: SearchCategory | 'general';
+  category: SearchCategory | 'general' | 'path';
 };
 
 function contentFields(data: Catalog, content: Content): FieldHit[] {
@@ -295,11 +291,14 @@ function contentFields(data: Catalog, content: Content): FieldHit[] {
     fields.push({ label: '關鍵字', value: product.keywords, weight: 40, category: 'general' });
   }
   for (const folder of trail(data.folders, content.folderId)) {
-    fields.push({ label: '屋苑', value: folderLabel(folder), weight: 55, category: 'estate' });
-    fields.push({ label: '目錄', value: folder.name, weight: 45, category: 'estate' });
+    fields.push({ label: '目錄', value: folderLabel(folder), weight: 55, category: 'path' });
+    fields.push({ label: '目錄', value: folder.name, weight: 45, category: 'path' });
     if (folder.subtitle) {
-      fields.push({ label: '屋苑', value: folder.subtitle, weight: 45, category: 'estate' });
+      fields.push({ label: '目錄', value: folder.subtitle, weight: 45, category: 'path' });
     }
+  }
+  for (const estate of estateNamesForFolder(data.folders, content.folderId)) {
+    fields.push({ label: '屋苑', value: estate, weight: 55, category: 'estate' });
   }
   return fields.filter((field) => field.value?.trim());
 }
@@ -336,20 +335,24 @@ export function legacyProductMatchesQuery(product: Product, parsed: ParsedSearch
 
 function folderFields(data: Catalog, folder: Folder): FieldHit[] {
   const fields: FieldHit[] = [
-    { label: '目錄', value: folder.name, weight: 80, category: 'estate' },
-    { label: '目錄', value: folderLabel(folder), weight: 75, category: 'estate' },
+    { label: '目錄', value: folder.name, weight: 80, category: 'path' },
+    { label: '目錄', value: folderLabel(folder), weight: 75, category: 'path' },
   ];
   if (folder.subtitle) {
-    fields.push({ label: '副標題', value: folder.subtitle, weight: 60, category: 'estate' });
+    fields.push({ label: '副標題', value: folder.subtitle, weight: 60, category: 'path' });
   }
   for (const parent of trail(data.folders, folder.id)) {
-    fields.push({ label: '路徑', value: folderLabel(parent), weight: 40, category: 'estate' });
-    fields.push({ label: '路徑', value: parent.name, weight: 35, category: 'estate' });
+    fields.push({ label: '路徑', value: folderLabel(parent), weight: 40, category: 'path' });
+    fields.push({ label: '路徑', value: parent.name, weight: 35, category: 'path' });
+  }
+  for (const estate of estateNamesForFolder(data.folders, folder.id)) {
+    fields.push({ label: '屋苑', value: estate, weight: 55, category: 'estate' });
   }
   return fields.filter((field) => field.value?.trim());
 }
 
 function fieldMatchesTerm(field: FieldHit, term: string, category: SearchCategory | null) {
+  if (category === 'estate' && field.category !== 'estate') return false;
   if (category && field.category !== category && field.category !== 'general') return false;
   const haystack = normalize(field.value);
   return expandTerm(term).some((variant) => haystack.includes(variant));

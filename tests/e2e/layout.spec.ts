@@ -3,10 +3,13 @@ import { test, expect } from '@playwright/test';
 test('16:9 homepage keeps search above the fold and five uncropped folder cards accessible', async ({
   page,
 }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto('/');
   await expect(page.locator('.directory-entry')).toHaveCount(5);
-  await expect(page.getByRole('searchbox')).toHaveCSS('font-size', '20px');
-  await expect(page.locator('.search-intro h1')).toHaveCSS('font-size', '36px');
+  await expect(page.locator('h1')).toHaveCount(1);
+  await expect(page.locator('h1')).toBeVisible();
+  await expect(page.getByRole('searchbox')).toHaveCSS('font-size', '24px');
+  await expect(page.locator('.search-intro h1')).toHaveCSS('font-size', '28px');
   const layout = await page.evaluate(() => ({
     width: innerWidth,
     height: innerHeight,
@@ -28,9 +31,11 @@ test('16:9 homepage keeps search above the fold and five uncropped folder cards 
   }
   expect(layout.targets[0].bottom).toBeLessThanOrEqual(layout.height);
   await expect(page.locator('.folder-tile')).toHaveCount(5);
-  await expect(page.locator('.folder-tile').first()).toHaveCSS('border-radius', '12px');
+  await expect(page.locator('.folder-tile').first()).toHaveCSS('border-radius', '27px');
 
   await page.goto('/?folder=unit-a');
+  await expect(page.locator('h1')).toHaveCount(1);
+  await expect(page.getByRole('heading', { level: 1, name: '450–550 呎 / 2–3 人' })).toBeVisible();
   await expect(page.getByRole('heading', { name: '小空間，大可能' })).toBeVisible();
   const contentBottom = await page
     .locator('.search-content-entry')

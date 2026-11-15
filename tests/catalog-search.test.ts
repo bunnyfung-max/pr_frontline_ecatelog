@@ -54,6 +54,32 @@ test('category search limits field scope', () => {
   assert.equal(colourMiss.contents.length, 0);
 });
 
+test('estate-prefixed searches and suggestions only use housing estate names, while general POP search remains available', () => {
+  const data = initialCatalog(true);
+  data.folders.find((folder) => folder.id === 'estate-a')!.name = '海景中心';
+  data.folders.find((folder) => folder.id === 'housing')!.name = '住宅展示';
+  data.folders.find((folder) => folder.id === 'unit-a')!.name = 'A座';
+  data.folders.find((folder) => folder.id === 'estate-a')!.subtitle = '門市推廣';
+  const estate = searchCatalogEnhanced(data, null, '屋苑 海景中心');
+  assert.ok(estate.contents.some((entry) => entry.item.id === 'kit-a'));
+  for (const query of ['屋苑 Weekly', '屋苑 門市推廣', '屋苑 住宅展示', '屋苑 A座']) {
+    const result = searchCatalogEnhanced(data, null, query);
+    assert.equal(result.contents.length, 0, query);
+    assert.equal(result.folders.length, 0, query);
+  }
+  const vocabulary = buildSearchVocabulary(data, null);
+  assert.ok(vocabulary.estates.includes('海景中心'));
+  assert.equal(vocabulary.estates.includes('Weekly Eposter'), false);
+  assert.equal(vocabulary.estates.includes('門市推廣'), false);
+  assert.equal(vocabulary.estates.includes('A座'), false);
+  const general = searchCatalogEnhanced(data, null, 'Weekly');
+  assert.ok(general.contents.some((entry) => entry.item.id === 'poster-demo'));
+  assert.ok(general.folders.some((entry) => entry.item.id === 'pop-2'));
+  assert.ok(searchCatalogEnhanced(data, null, '門市推廣').folders.some((entry) => entry.item.id === 'pop'));
+  assert.ok(searchCatalogEnhanced(data, null, '門市推廣').contents.some((entry) => entry.item.id === 'poster-demo'));
+  assert.equal(searchCatalogEnhanced(data, null, '品牌 Weekly').folders.some((entry) => entry.item.id === 'pop-2'), false);
+});
+
 test('synonyms expand sofa queries without inventing catalog data', () => {
   const data = initialCatalog(true);
   assert.equal(searchCatalog(data, 'estate-a', 'sofa').contents[0]?.id, 'kit-a');

@@ -126,6 +126,24 @@ export function CatalogApp() {
     const qs = p.toString();
     router.replace(qs ? `/?${qs}` : '/', { scroll: false });
   }, [router]);
+  const switchFolder = useCallback((id: string) => {
+    setActiveContentId(null);
+    const p = new URLSearchParams();
+    if (id) p.set('folder', id);
+    if (cmsMode) p.set('cms', '1');
+    const qs = p.toString();
+    router.replace(qs ? `/?${qs}` : '/', { scroll: false });
+  }, [router, cmsMode]);
+  const openContent = useCallback((id: string) => {
+    const item = data?.contents.find((entry) => entry.id === id);
+    if (!item) return;
+    setActiveContentId(id);
+    const p = new URLSearchParams();
+    p.set('folder', item.folderId);
+    p.set('content', id);
+    if (cmsMode) p.set('cms', '1');
+    router.replace(`/?${p.toString()}`, { scroll: false });
+  }, [data, router, cmsMode]);
   const saved = () => {
     setEdit(null);
     setManage('');
@@ -168,16 +186,17 @@ export function CatalogApp() {
   const folder = data?.folders.find((f) => f.id === folderId);
   const current = data?.contents.find((c) => c.id === activeContentId);
   return (
-    <div className={`app-shell ${cms ? 'cms-shell' : 'frontline'}`}>
-      <header className="topbar">
+    <div className={cms ? 'cms-root' : 'ecat ecat-root'}>
+    <div className={`app-shell ${cms ? 'cms-shell' : 'frontline shell directory-shell'}`}>
+      {!current && <header className="topbar masthead">
         <button className="brand" onClick={() => navigate('', false)}>
           <img className="brand-logo" src="/pricerite-logo.svg" alt="Pricerite 實惠" />
           <span>
-            {cms ? 'Frontline' : '前線銷售'}
+            Frontline
             {cms && <i>門市銷售工具</i>}
           </span>
         </button>
-        <div className="top-actions">
+        <div className="top-actions header-actions home-utilities">
           {session.demo && !cms && (
             <span className="demo-label" title="所有屋苑、產品及優惠均為示例，非正式銷售資料">
               示例模式
@@ -227,13 +246,13 @@ export function CatalogApp() {
             </button>
           )}
         </div>
-      </header>
+      </header>}
       {session.demo && cms && (
         <div className="demo-strip">
           本機示例模式 <span>· 所有屋苑、產品及優惠均為示例，非正式銷售資料</span>
         </div>
       )}
-      <div className="workspace">
+      {!current && <div className="workspace">
         {cms && (
           <aside className="sidebar">
             <div className="sidebar-scroll">
@@ -424,11 +443,11 @@ export function CatalogApp() {
             </footer>
           )}
         </main>
-      </div>
+      </div>}
       {data &&
         activeContentId &&
         (current ? (
-          <Viewer key={activeContentId} content={current} data={data} close={closeContent} />
+          <Viewer key={activeContentId} content={current} data={data} close={closeContent} switchFolder={switchFolder} openContent={openContent} />
         ) : (
           <Modal title="內容未能開啟" close={closeContent}>
             <Empty title="內容不存在、已下架或未發布" />
@@ -459,7 +478,7 @@ export function CatalogApp() {
       {editFolder && (
         <FolderForm folder={editFolder} close={() => setEditFolder(null)} saved={saved} />
       )}
-      {!cms && !passwordOpen && (
+      {!current && !cms && !passwordOpen && (
         <button
           type="button"
           className="password-corner"
@@ -469,7 +488,7 @@ export function CatalogApp() {
           更改密碼
         </button>
       )}
-      {!feedbackOpen && (
+      {!current && !feedbackOpen && (
         <FeedbackFloatingButton onClick={() => setFeedbackOpen(true)} />
       )}
       {passwordOpen && (
@@ -500,6 +519,7 @@ export function CatalogApp() {
           {toast}
         </div>
       )}
+    </div>
     </div>
   );
 }

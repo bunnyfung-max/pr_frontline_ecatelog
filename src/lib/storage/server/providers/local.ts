@@ -41,8 +41,9 @@ export const localStorageProvider: StorageServerProvider = {
   },
   async saveLocalFile(objectKey, bytes, mime) {
     if (!validateUploadBytes(bytes, mime)) throw new HttpError(400, '檔案內容與所選格式不符，請重新選擇檔案。');
-    await mkdir(uploadsDir(), { recursive: true });
-    await writeFile(path.join(uploadsDir(), objectKey), bytes);
+    const target = path.join(uploadsDir(), objectKey);
+    await mkdir(path.dirname(target), { recursive: true });
+    await writeFile(target, bytes);
     return toAssetRef(objectKey);
   },
 };

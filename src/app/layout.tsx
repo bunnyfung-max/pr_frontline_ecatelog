@@ -2,6 +2,10 @@ import type { Metadata } from 'next';
 import { Noto_Sans_TC } from 'next/font/google';
 import './globals.css';
 import './frontline-search.css';
+import '../styles/ecat/ecat.css';
+import '../styles/ecat/bridge.css';
+import '../styles/ecat/directory-ux.css';
+import '../components/search-ux.css';
 
 const notoSansTC = Noto_Sans_TC({
   subsets: ['latin'],
