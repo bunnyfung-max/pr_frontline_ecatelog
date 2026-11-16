@@ -90,3 +90,24 @@
   width: 18px;
   height: 18px;
 }
+
+/* Keep the five category controls a consistent size on wide screens. */
+.ecat #library-dialog[data-mode=scope] .browse-tabs {
+  flex: 0 0 auto;
+  width: auto;
+}
+.ecat #library-dialog[data-mode=scope] .browse-tabs button {
+  flex: 0 0 110px;
+  width: 110px;
+  min-width: 110px;
+}
+
+/* Wrap the controls before they would compete with the search field. */
+@media (max-width: 1100px) {
+  .ecat #library-dialog[data-mode=scope] .browse-tabs {
+    flex: 0 0 100%;
+    width: 100%;
+    flex-wrap: wrap;
+    overflow: visible;
+  }
+}
