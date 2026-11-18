@@ -13,6 +13,7 @@ import {
   Folder,
   Upload,
   Monitor,
+  LayoutGrid,
   CheckCircle2,
   LockKeyhole,
   RefreshCw,
@@ -223,7 +224,7 @@ export function CatalogApp() {
               className={`subtle ${cms ? 'selected' : ''}`}
               onClick={() => navigate(folderId, !cms)}
             >
-              {cms && <Monitor size={17} />}
+              {cms ? <Monitor size={17} aria-hidden="true" /> : <LayoutGrid size={17} aria-hidden="true" />}
               <span>{cms ? '返回展示' : '內容管理'}</span>
             </button>
           )}
@@ -321,7 +322,7 @@ export function CatalogApp() {
                 <>
                   {folder && (
                     <div className="frontline-folder-heading">
-                      <h1>{folderLabel(folder)}</h1>
+                      {current ? <h2>{folderLabel(folder)}</h2> : <h1>{folderLabel(folder)}</h1>}
                     </div>
                   )}
                   <FrontlineBrowser
@@ -336,7 +337,7 @@ export function CatalogApp() {
                   />
                 </>
               ) : !folderId ? (
-                <HomePage data={data} cms={cms} navigate={navigate} saved={saved} />
+                <HomePage data={data} cms={cms} navigate={navigate} saved={saved} suspended={Boolean(current)} />
               ) : !folder ? (
                 <Empty title="找不到這個資料夾">
                   <button onClick={() => navigate('')} className="text-btn">
@@ -356,7 +357,7 @@ export function CatalogApp() {
                               : 'FRONTLINE COLLECTION'}
                         </span>
                       )}
-                      <h1>{folder.name}</h1>
+                      {current ? <h2>{folder.name}</h2> : <h1>{folder.name}</h1>}
                       {cms && (
                         <p>
                           {folder.subtitle ||

@@ -30,6 +30,8 @@ import { makeId } from './utils';
 import { TagField } from './fields/tag-field';
 import { EshopProductField } from './fields/eshop-product-field';
 import { ImageField } from './fields/image-field';
+import './photo-caption.css';
+import { productTagsForContent } from '@/lib/product-browse';
 
 export function ContentEditor({
   data,
@@ -68,6 +70,7 @@ export function ContentEditor({
         updatedAt: '',
       }),
       tags: content?.tags ?? [],
+      productTags: content?.productTags ?? [],
       eshopProducts: content?.eshopProducts ?? [],
       productIds: content?.productIds ?? [],
     };
@@ -156,7 +159,7 @@ export function ContentEditor({
           try {
             await save(
               'content',
-              { ...value, status: action || value.status },
+              { ...value, photoRefs: value.photoRefs?.filter((ref) => value.files.includes(ref)), status: action || value.status },
               folderId,
               content?.updatedAt,
             );
@@ -349,6 +352,31 @@ export function ContentEditor({
                   </div>
                 </>
               )}
+              {value.type === 'image' && value.files.some((ref) => ref && fileKind(ref) === 'image') && (
+                <section className="photo-caption-picker" aria-label="圖片標題設定">
+                  <h3>在實景照片顯示單位名稱</h3>
+                  <p>只勾選沒有文字或資料的家居實景照片；圖文文件和平面圖請勿勾選。</p>
+                  {value.files.map((ref, index) => ref && fileKind(ref) === 'image' ? (
+                    <label className="photo-caption-choice" key={`${ref}-${index}`}>
+                      <input
+                        type="checkbox"
+                        checked={(value.photoRefs ?? []).includes(ref)}
+                        onChange={(event) => {
+                          const checked = event.target.checked;
+                          setValue((old) => ({
+                            ...old,
+                            photoRefs: checked
+                              ? [...new Set([...(old.photoRefs ?? []), ref])]
+                              : (old.photoRefs ?? []).filter((item) => item !== ref),
+                          }));
+                        }}
+                      />
+                      <Thumb src={ref} alt="" />
+                      <span>第 {index + 1} 張圖片顯示名稱</span>
+                    </label>
+                  ) : null)}
+                </section>
+              )}
               <ImageField
                 label="縮圖 / 封面"
                 value={value.cover}
@@ -377,8 +405,30 @@ export function ContentEditor({
               </label>
               <TagField tags={value.tags ?? []} onChange={(tags) => update('tags', tags)} />
               <p className="muted">
-                標籤可用作空間篩選（如「客廳」「書房」）及產品類別；請使用目錄內已有的品牌、顏色與風格用語。
+                一般標籤可用於搜尋及空間分類，例如「客廳」「書房」。
               </p>
+              <TagField
+                label="產品標籤"
+                help="只輸入產品或產品類別，例如「梳化」「衣櫃」；房型、空間、顏色或風格請放在一般標籤。"
+                tags={value.productTags ?? []}
+                onChange={(tags) => update('productTags', tags)}
+              />
+              {(value.tags ?? []).filter((tag) => !productTagsForContent(data, value).includes(tag)).length > 0 && (
+                <div>
+                  <p className="muted">從現有一般標籤選擇屬於產品的項目；其他標籤仍可於一般搜尋找到。</p>
+                  <div className="tag-list">
+                    {(value.tags ?? []).filter((tag) => !productTagsForContent(data, value).includes(tag)).map((tag) => (
+                      <button
+                        type="button"
+                        className="tag-chip"
+                        key={tag}
+                        disabled={(value.productTags ?? []).length >= 30}
+                        onClick={() => update('productTags', [...(value.productTags ?? []), tag])}
+                      >+ {tag}</button>
+                    ))}
+                  </div>
+                </div>
+              )}
               <EshopProductField
                 products={value.eshopProducts ?? []}
                 onChange={(eshopProducts) => update('eshopProducts', eshopProducts)}

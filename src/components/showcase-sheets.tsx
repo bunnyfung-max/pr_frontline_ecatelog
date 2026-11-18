@@ -16,6 +16,7 @@ import {
   ChevronRight,
   Folder as FolderIcon,
   House,
+  Tag,
   X,
 } from "lucide-react";
 import type { Catalog, Content, Folder, Product, Scene } from "@/lib/types";
@@ -40,6 +41,7 @@ import { ContentShoppingLinks } from "./shopping-links";
 import { estateNamesForFolder } from "@/lib/housing-estate";
 import { EmptyState } from "./empty-state";
 import type { LibraryRequest, LibraryViewState } from "@/lib/library-return-state";
+import { productBrowseValues, productTagsForContent } from "@/lib/product-browse";
 
 export type { LibraryRequest } from "@/lib/library-return-state";
 
@@ -108,13 +110,34 @@ function coverOf(content: Content) {
   return ref ? assetUrl(ref) : "";
 }
 
+function linkedProductNames(data: Catalog, content: Content) {
+  const productNames = [
+    ...(content.eshopProducts ?? []).map((product) => product.title),
+    ...(content.productIds ?? []).map((id) => data.products.find((product) => product.id === id)?.name ?? ""),
+  ].map((name) => name.trim()).filter(Boolean);
+  const names: string[] = [];
+  const seen = new Set<string>();
+  for (const name of productNames) {
+    const key = normalized(name);
+    if (!key || seen.has(key) || normalized(content.name).includes(key)) continue;
+    seen.add(key);
+    names.push(name);
+    if (seen.size === 2) break;
+  }
+  return names;
+}
+
 function contentSummary(data: Catalog, content: Content) {
   const place = trail(data.folders, content.folderId)
     .map(folderLabel)
     .filter(Boolean);
-  const bits = [place.at(-1) || ""];
-  if (content.salesKit) bits.push("空間 · 配置 · 資料");
-  else if (content.files.length)
+  const lastPlace = place.at(-1) || "";
+  const bits = lastPlace && !normalized(content.name).includes(normalized(lastPlace))
+    ? [lastPlace]
+    : [];
+  const names = linkedProductNames(data, content);
+  bits.push(...names);
+  if (!names.length && content.files.length)
     bits.push(`${content.files.filter(Boolean).length} 項內容`);
   return bits.filter(Boolean).join(" · ");
 }
@@ -126,6 +149,7 @@ function CaseCards({
   variant = "directory",
   query = "",
   reasons,
+  matchLabel,
 }: {
   data: Catalog;
   items: Content[];
@@ -133,6 +157,7 @@ function CaseCards({
   variant?: "directory" | "scope";
   query?: string;
   reasons?: Map<string, SearchMatchReason[]>;
+  matchLabel?: string;
 }) {
   return (
     <div className="case-grid">
@@ -140,11 +165,17 @@ function CaseCards({
         const cover = coverOf(content);
         const planOnly =
           !content.salesKit && /平面圖|floor.?plan/i.test(content.name);
+        const productHint = matchLabel
+          ? linkedProductNames(data, content).find((name) => {
+              const label = normalized(matchLabel);
+              return label && !normalized(name).includes(label);
+            })
+          : undefined;
         const evidence =
           reasons
             ?.get(content.id)
-            ?.filter((reason) => reason.value !== content.name)
-            .slice(0, 2) ?? [];
+            ?.filter((reason) => !normalized(content.name).includes(normalized(reason.value)))
+            .slice(0, matchLabel ? (productHint ? 0 : 1) : 2) ?? [];
         return (
           <button
             className={`case-card ${variant}-card${planOnly ? " plan-only" : ""}`}
@@ -171,8 +202,10 @@ function CaseCards({
             <h3 title={content.name}>
               <Highlight text={content.name} query={query} />
             </h3>
-            {evidence.length ? (
-              <div className="scope-card-details">
+            {evidence.length || matchLabel ? (
+              <div className={`scope-card-details${productHint ? " has-product-hint" : ""}`}>
+                {matchLabel && <span className="scope-card-line">篩選 · {matchLabel}</span>}
+                {productHint && <span className="scope-card-line" title={productHint}>商品 · {productHint}</span>}
                 {evidence.map((reason) => (
                   <span
                     className="scope-card-line"
@@ -301,7 +334,6 @@ function FolderLinks({
           type="button"
           onClick={() => onSelect(folder.id)}
         >
-          <FolderIcon size={18} aria-hidden="true" />
           <span>{folderLabel(folder)}</span>
           <ChevronRight size={14} aria-hidden="true" />
         </button>
@@ -448,6 +480,11 @@ export function ShowcaseLibrary({
 
   const scope = request.mode === "scope" ? request.scope : "product";
   const scopeLabel = SEARCH_CATEGORY_LABEL[scope];
+  const hasUnclassifiedTags = scope === "product" && data.contents.some((content) => {
+    if (content.status !== "published") return false;
+    const known = new Set(productTagsForContent(data, content).map(normalized));
+    return (content.tags ?? []).some((tag) => tag.trim() && !known.has(normalized(tag)));
+  });
   const options = useMemo(
     () => (request.mode === "scope" ? browseOptions(data, scope) : []),
     [data, request.mode, scope],
@@ -600,9 +637,9 @@ export function ShowcaseLibrary({
               <button type="submit">搜尋</button>
             </form>
           </div>
-          {activePath.length > 1 && (
+          {activePath.length > 2 && (
             <nav className="library-tabs library-path" aria-label="資料夾路徑">
-              {activePath.map((item, index) => (
+              {activePath.slice(0, -1).map((item, index) => (
                 <button
                   type="button"
                   key={item.id}
@@ -715,6 +752,7 @@ export function ShowcaseLibrary({
             <div>
               <h2 id="library-title">按{scopeLabel}找資料</h2>
               <p className="browse-intro">輕點項目，直接查看相關資料</p>
+              {hasUnclassifiedTags && <p className="browse-intro">其他一般標籤可透過首頁搜尋查看。</p>}
             </div>
             <CloseButton label="關閉分類瀏覽" onClose={onClose} />
           </div>
@@ -731,10 +769,7 @@ export function ShowcaseLibrary({
                     onScope(item);
                   }}
                 >
-                  <img
-                    src={`/frontline/figma/${SCOPE_ICONS[item]}.svg`}
-                    alt=""
-                  />
+                  {item === "brand" ? <Tag className="scope-brand-icon" size={24} strokeWidth={1.5} aria-hidden="true" /> : <img src={`/frontline/figma/${SCOPE_ICONS[item]}.svg`} alt="" />}
                   {SEARCH_CATEGORY_LABEL[item]}
                 </button>
               ))}
@@ -754,6 +789,7 @@ export function ShowcaseLibrary({
                 value={scopeQuery}
                 onChange={(event) => setScopeQuery(event.target.value)}
               />
+              {scopeQuery && <button className="scope-search-clear" type="button" aria-label="清除搜尋" onClick={(event) => { setScopeQuery(""); event.currentTarget.form?.querySelector<HTMLInputElement>("input")?.focus(); }}><X size={18} aria-hidden="true" /></button>}
               <button type="submit">搜尋</button>
             </form>
           </div>
@@ -781,17 +817,9 @@ export function ShowcaseLibrary({
                   </button>
                 ))}
               </ScrollStrip>
-              {(selected || scopeQuery.trim()) && (
-                <div className="scope-active-filter" role="status">
-                  {selected && <span>已選：<strong>{selected.label}</strong></span>}
-                  {selected && <button type="button" onClick={() => setSelectedValue("")}>清除已選</button>}
-                  {scopeQuery.trim() && <button type="button" onClick={() => setScopeQuery("")}>清除搜尋</button>}
-                </div>
-              )}
               <div className="browse-results-head">
                 <h3>
-                  {options.find((option) => option.key === selectedValue)
-                    ?.label || "全部相關資料"}
+                  相關資料
                 </h3>
                 <p role="status">{scopeItems.length} 份資料</p>
               </div>
@@ -803,6 +831,7 @@ export function ShowcaseLibrary({
                   variant="scope"
                   query={scopedQuery}
                   reasons={evidence(scopeResults)}
+                  matchLabel={selected?.label}
                 />
               ) : (
                 <EmptyState className="scope-no-results" kind="search" title={`沒有找到相符的${scopeLabel}資料`} />
@@ -822,11 +851,7 @@ function browseValues(data: Catalog, content: Content, scope: SearchCategory) {
   const place = trail(data.folders, content.folderId);
   const tags = content.tags.map((tag) => tag.trim()).filter(Boolean);
   if (scope === "product") {
-    return [
-      ...products.flatMap((product) => [product.name, product.code]),
-      ...content.eshopProducts.flatMap((item) => [item.title, item.sku]),
-      ...tags,
-    ].filter(Boolean);
+    return productBrowseValues(data, content);
   }
   if (scope === "brand") {
     return [

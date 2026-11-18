@@ -21,7 +21,7 @@ function render(data: Catalog, folderId?: string, query = "") {
 
 test("category deep links preserve the search term and expose the active filter state", () => {
   const html = render(initialCatalog(true), undefined, "品牌 RIVO");
-  assert.match(html, /aria-pressed="true"[^>]*>品牌<\/button>/);
+  assert.match(html, /aria-pressed="true"[^>]*>(?:(?!<\/button>)[\s\S])*品牌<\/button>/);
   assert.match(html, /aria-label="搜尋全部銷售資料"[^>]*value="RIVO"/);
   // The editable results-dialog field retains the category prefix so its
   // scope remains explicit when the search is revised.

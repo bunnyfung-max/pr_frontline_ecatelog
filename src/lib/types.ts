@@ -37,10 +37,14 @@ export interface Content {
   files: string[];
   /** First five positions are reserved images; positions 1–4 have fixed roles. */
   salesKit?: boolean;
+  /** Image references explicitly marked as scene photos; other media stays unobscured. */
+  photoRefs?: string[];
   fileName: string;
   cover: string;
   keywords: string;
   tags: string[];
+  /** Explicit product-only labels; legacy untyped tags remain unchanged. */
+  productTags?: string[];
   eshopProducts: EshopProductLink[];
   productIds: string[];
   storeUrl?: string;

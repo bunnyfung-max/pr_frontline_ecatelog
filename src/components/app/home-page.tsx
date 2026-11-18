@@ -16,11 +16,13 @@ export function HomePage({
   cms,
   navigate,
   saved,
+  suspended = false,
 }: {
   data: Catalog;
   cms: boolean;
   navigate: (id: string, admin?: boolean) => void;
   saved: () => void;
+  suspended?: boolean;
 }) {
   const [q, setQ] = useState('');
   const [newRoot, setNewRoot] = useState(false);
@@ -39,7 +41,7 @@ export function HomePage({
     <>
       <div className="section-heading">
         <div>
-          <h1>選擇管理目錄</h1>
+          {suspended ? <h2>選擇管理目錄</h2> : <h1>選擇管理目錄</h1>}
           <p>{roots.length} 個主目錄入口，一站取閱。</p>
         </div>
         <div className="section-heading-actions">

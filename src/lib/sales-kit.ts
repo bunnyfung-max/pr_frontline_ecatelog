@@ -89,6 +89,10 @@ export interface ReaderAsset {
   kind: ContentType;
   label: string;
 }
+/** Only explicitly marked photos can carry a title over their image. */
+export function showPhotoCaption(content: Pick<Content, 'photoRefs'>, leaf: ReaderAsset | undefined, pages: number[], scale: number): boolean {
+  return !!leaf && leaf.kind === 'image' && pages.length === 1 && scale === 1 && (content.photoRefs ?? []).includes(leaf.ref);
+}
 export function readerAssets(content: Content): ReaderAsset[] {
   return content.files.flatMap((ref, i) =>
     !ref

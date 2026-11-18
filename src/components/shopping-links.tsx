@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, ChevronLeft, ChevronRight, ShoppingBag } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { ChevronLeft, ChevronRight, ShoppingBag } from 'lucide-react';
 import type { Content, EshopProductLink, Product } from '@/lib/types';
+import { splitProductTitleDimensions } from '@/lib/product-title-dimensions';
 import {
   fetchLiveEshopProducts,
   toLiveEshopProduct,
@@ -250,16 +251,13 @@ export function ContentProductDetail({
   prices,
   selection,
   onSelect,
-  onBack,
 }: {
   content: Content;
   products: Product[];
   prices: EshopProductPrices;
   selection: ProductSelection;
   onSelect: (selection: ProductSelection) => void;
-  onBack: () => void;
 }) {
-  const backRef = useRef<HTMLButtonElement>(null);
   const related = products.filter((product) => content.productIds.includes(product.id));
   const choices: ProductSelection[] = [
     ...content.eshopProducts.map((product) => ({ kind: 'eshop' as const, url: product.url })),
@@ -271,6 +269,7 @@ export function ContentProductDetail({
   const saved = selection.kind === 'eshop' ? content.eshopProducts.find((product) => product.url === selection.url) : undefined;
   const live = prices.live.find((product) => product.url === (saved?.url || catalog?.url));
   const title = catalog?.name || live?.title || saved?.title || '產品資料';
+  const { displayTitle, dimensions } = splitProductTitleDimensions(title);
   const brand = catalog?.brand || live?.brand || saved?.brand;
   const code = catalog?.code || live?.sku || saved?.sku;
   const image = catalog?.image || live?.image || saved?.image || '';
@@ -282,26 +281,20 @@ export function ContentProductDetail({
   const metadata = [
     ['產品編號', code],
     ['品牌', brand],
+    ['尺寸', displayTitle !== title ? dimensions : undefined],
     ['顏色', catalog?.colour],
     ['風格', catalog?.style],
   ].filter((item) => Boolean(item[1]));
 
-  useEffect(() => {
-    backRef.current?.focus();
-  }, []);
-
   return (
     <section className="product-detail" aria-label="單件產品詳情">
-      <button type="button" className="product-detail-back" ref={backRef} onClick={onBack}>
-        <ArrowLeft size={16} aria-hidden="true" /> 返回產品列表
-      </button>
       {index < 0 || (!catalog && !saved) ? (
         <p role="status">這件產品已不在本份內容內。</p>
       ) : (
         <>
           <div className="product-detail-image"><Thumb src={image} fallbackLabel={brand || '產品'} /></div>
           <p className="product-detail-brand">{brand || '產品資料'}</p>
-          <h3 className="product-detail-title" aria-live="polite">{title}</h3>
+          <h3 className="product-detail-title" aria-live="polite">{displayTitle}</h3>
           <div className="product-detail-price" aria-live="polite">
             {prices.loading && (saved || live) ? <span>價格更新中…</span> : unavailable ? <span>已下架或連結失效</span> : showPrice ? (
               <>

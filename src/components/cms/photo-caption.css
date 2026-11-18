@@ -1,0 +1,21 @@
+.photo-caption-picker {
+  margin: 18px 0;
+  padding: 16px;
+  border: 1px solid #dfe8da;
+  border-radius: 14px;
+  background: #f7faf5;
+}
+.photo-caption-picker h3 { margin: 0 0 6px; font-size: 15px; }
+.photo-caption-picker p { margin: 0 0 10px; color: #61705d; font-size: 12px; line-height: 1.5; }
+.editor-columns .photo-caption-choice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 56px;
+  margin: 0;
+  padding: 6px 0;
+}
+.photo-caption-choice input[type='checkbox'] { width: 20px; height: 20px; flex: 0 0 20px; accent-color: #50b748; }
+.photo-caption-choice .thumb { width: 52px; height: 44px; flex: 0 0 52px; overflow: hidden; border-radius: 6px; }
+.photo-caption-choice .thumb img { width: 100%; height: 100%; object-fit: cover; }
+.photo-caption-choice span { font-size: 13px; line-height: 1.4; }

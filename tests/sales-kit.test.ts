@@ -14,11 +14,26 @@ import {
   readerLeaves,
   readerSpread,
   previousReaderPage,
+  showPhotoCaption,
 } from '../src/lib/sales-kit';
 
 const base = initialCatalog(true).contents.find((item) => item.id === 'kit-a')!;
 const images = ['asset:plan.png', 'asset:render.jpg', 'asset:list1.webp', 'asset:list2.png', ''];
 const kit = { ...base, salesKit: true, files: images };
+
+test('photo captions require an explicit image reference and never cover document or spread pages', () => {
+  const [plan, photo] = readerAssets(kit);
+  const marked = { ...kit, photoRefs: [photo.ref] };
+  assert.equal(showPhotoCaption(kit, photo, [2], 1), false);
+  assert.equal(showPhotoCaption(marked, photo, [2], 1), true);
+  assert.equal(showPhotoCaption(marked, plan, [1], 1), false);
+  assert.equal(showPhotoCaption(marked, photo, [2, 3], 1), false);
+  assert.equal(showPhotoCaption(marked, photo, [2], 1.5), false);
+  assert.equal(showPhotoCaption(marked, { ref: photo.ref, kind: 'pdf', label: 'PDF' }, [1], 1), false);
+  assert.equal(schemas.content.safeParse(marked).success, true);
+  assert.equal(schemas.content.safeParse({ ...kit, photoRefs: ['asset:missing.jpg'] }).success, false);
+  assert.equal(schemas.content.safeParse({ ...kit, files: [...images, 'asset:detail.pdf'], photoRefs: ['asset:detail.pdf'] }).success, false);
+});
 
 test('kit slots retain roles when uploaded out of order, replaced or cleared', () => {
   let files = kitFiles([]);

@@ -260,11 +260,13 @@
 
 /* Fit more directory cards on wide screens while keeping tablet cards readable. */
 @media (min-width: 901px) {
-  .ecat #library-dialog[data-mode='directory'] .case-grid {
+  .ecat #library-dialog[data-mode='directory'] .case-grid,
+  .ecat #browse[data-sheet='browse'] .case-grid {
     grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   }
 
-  .ecat #library-dialog[data-mode='directory'] .case-grid > .directory-card {
+  .ecat #library-dialog[data-mode='directory'] .case-grid > .directory-card,
+  .ecat #browse[data-sheet='browse'] .case-grid > .case-card {
     max-width: 220px;
   }
 }

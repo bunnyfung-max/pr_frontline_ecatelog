@@ -48,6 +48,7 @@ export const schemas = {
       type: z.enum(['image', 'pdf', 'video', 'link']),
       files: z.array(z.string().max(2000)).min(1).max(40),
       salesKit: z.boolean().optional(),
+      photoRefs: z.array(assetRef).max(40).optional(),
       fileName: z.string().max(1000),
       cover: image,
       keywords: z.string().max(2000),
@@ -55,6 +56,10 @@ export const schemas = {
         .array(z.string().trim().min(1, '標籤不可為空白').max(50))
         .max(30)
         .default([]),
+      productTags: z
+        .array(z.string().trim().min(1, '產品標籤不可為空白').max(50))
+        .max(30)
+        .optional(),
       eshopProducts: z.array(eshopProductLink).max(30).default([]),
       productIds: z.array(idSchema).max(200),
       storeUrl: httpsUrl.default(''),
@@ -64,6 +69,11 @@ export const schemas = {
       updatedAt: z.string(),
     })
     .superRefine((c, ctx) => {
+      c.photoRefs?.forEach((ref, i) => {
+        if (!ref || !c.files.includes(ref) || c.type === 'link' || !/\.(?:png|jpe?g|webp|svg)$/i.test(ref)) {
+          ctx.addIssue({ code: 'custom', message: '實景照片必須是本份內容的圖片。', path: ['photoRefs', i] });
+        }
+      });
       if (c.salesKit && (c.type !== 'image' || c.files.length < KIT_RESERVED))
         ctx.addIssue({ code: 'custom', message: 'Sales Kit 必須保留五個圖片位置。' });
       c.files.forEach((file, i) => {

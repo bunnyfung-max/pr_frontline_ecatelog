@@ -12,6 +12,43 @@ function render(data: Catalog, request: LibraryRequest) {
   }));
 }
 
+test('directory card summaries use distinct linked product names instead of repeating the title', () => {
+  const data = initialCatalog(true);
+  const template = data.contents.find((item) => item.id === 'kit-a')!;
+  const saved = template.eshopProducts[0];
+  data.contents = [{
+    ...template, id: 'feature-card', folderId: 'housing', name: '特色家居',
+    eshopProducts: [{ ...saved, title: '特色家居' }, { ...saved, title: '布藝梳化' }],
+    productIds: ['bed'],
+  }];
+  data.products = [{
+    id: 'bed', name: '木製雙人床', code: 'TEST-BED', brand: '', colour: '', style: '',
+    keywords: '', image: '', url: '',
+  }];
+  const html = render(data, { mode: 'directory', folderId: 'housing' });
+  assert.match(html, /布藝梳化/);
+  assert.match(html, /木製雙人床/);
+  const summary = html.match(/<p class="case-summary">.*?<\/p>/)?.[0] ?? '';
+  assert.doesNotMatch(summary, /特色家居|空間 · 配置 · 資料/);
+});
+
+test('selected filter cards retain the filter label and a distinct linked product hint', () => {
+  const data = initialCatalog(true);
+  const template = data.contents.find((item) => item.id === 'kit-a')!;
+  data.contents = [{
+    ...template, id: 'filter-feature-card', folderId: 'housing', name: '特色家居',
+    tags: ['梳化'], eshopProducts: [{ ...template.eshopProducts[0], title: '多功能茶几' }],
+  }];
+  const request: LibraryRequest = { mode: 'scope', scope: 'product' };
+  const html = renderToStaticMarkup(createElement(ShowcaseLibrary, {
+    data, request,
+    initialView: { request, childId: '', directoryQuery: '', scopeQuery: '', selectedValue: '梳化', searchInput: '' },
+    onClose: () => {}, onNavigate: () => {}, onOpen: () => {}, onScope: () => {},
+  }));
+  assert.match(html, /篩選 · 梳化/);
+  assert.match(html, /商品 · 多功能茶几/);
+});
+
 test('a restored directory opens at its previous child and search text', () => {
   const request: LibraryRequest = { mode: 'directory', folderId: 'housing' };
   const html = renderToStaticMarkup(createElement(ShowcaseLibrary, {

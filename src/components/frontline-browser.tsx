@@ -6,6 +6,7 @@ import {
   ChevronRight,
   Folder as FolderIcon,
   Search,
+  Tag,
   X,
 } from "lucide-react";
 import type { Catalog, Content, Folder, Scene } from "@/lib/types";
@@ -285,7 +286,7 @@ export function FrontlineBrowser({
     trail(data.folders, id).map(folderLabel).join(" / ");
 
   const directory = (items: Folder[], cards = false) => (
-    <div className={`directory-grid${cards ? " folder-card-grid" : ""}`}>
+    <div className={`directory-grid${cards ? " folder-card-grid" : ""}`} data-folder-count={cards ? items.length : undefined}>
       {items.map((f, index) => {
         const hasContent = folderHasBrowseableContent(data, f.id);
         const childFolders = data.folders.filter(
@@ -302,6 +303,7 @@ export function FrontlineBrowser({
             className={`directory-entry${cards ? " folder-tile" : ""}${cards && hasContent ? " folder-tile-ready" : ""}${cards && !hasContent ? " folder-tile-empty" : ""}`}
             data-tone={folioTone(f.id)}
             key={f.id}
+            disabled={cards && !hasContent}
             onClick={() => {
               if (home && cards) {
                 setLibrary({ mode: "directory", folderId: f.id });
@@ -470,7 +472,7 @@ export function FrontlineBrowser({
       >
         {home && (
           <div className="search-intro desk-title">
-            <h1>想找甚麼銷售資料？</h1>
+            {suspended ? <h2>想找甚麼銷售資料？</h2> : <h1>想找甚麼銷售資料？</h1>}
             <p className="desk-caption">選一份資料，開始一段家的對話。</p>
           </div>
         )}
@@ -557,6 +559,7 @@ export function FrontlineBrowser({
                   }
                   onClick={() => setLibrary({ mode: "scope", scope: category })}
                 >
+                  {category === "brand" && <Tag className="scope-brand-icon" size={22} strokeWidth={1.5} aria-hidden="true" />}
                   {SEARCH_CATEGORY_LABEL[category]}
                 </button>
               ))}

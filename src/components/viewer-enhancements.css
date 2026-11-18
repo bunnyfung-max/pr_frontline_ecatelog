@@ -213,6 +213,21 @@
 .ecat .viewer.viewer-shell .source-caption p { margin: 0 0 8px; font-size: 10px; letter-spacing: 2px; }
 .ecat .viewer.viewer-shell .source-caption strong { display: block; margin: 0 0 8px; font-size: 28px; line-height: 1.2; font-weight: 400; }
 .ecat .viewer.viewer-shell .source-caption > span { font-size: 12px; }
+/* A fitted photo can leave a pale margin around it. Keep its caption readable
+   on either the photo or that margin without covering the reader controls. */
+.ecat .viewer.viewer-shell .is-photograph .source-caption {
+  max-width: min(48%, 520px);
+  padding: 9px 13px;
+  border-radius: 12px;
+  background: #253b33ee;
+  color: #fff;
+}
+.ecat .viewer.viewer-shell .is-photograph .source-caption strong {
+  margin: 0;
+  font-size: clamp(16px, 1.6vw, 24px);
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
 .ecat .viewer.viewer-shell .housing-rail { position: absolute; z-index: 5; right: 16px; top: 74px; bottom: 72px; width: 132px; height: auto; display: flex; flex-direction: column; gap: 8px; padding: 2px 4px; overflow: auto; border: 0; border-radius: 16px; background: transparent; box-shadow: none; backdrop-filter: none; }
 .ecat .viewer.viewer-shell .housing-rail button { position: relative; flex: 0 0 auto; display: block; width: 100%; min-height: 44px; padding: 5px; border: 2px solid transparent; border-radius: 12px; background: #ffffffdc; color: #29323a; text-align: left; }
 .ecat .viewer.viewer-shell .housing-rail button[aria-current='page'] { border-color: #65b956; background: #eaf5e4; }
@@ -246,7 +261,7 @@
 .ecat .viewer.viewer-shell .viewer-pdf-link { flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; min-height: 40px; height: 40px; padding: 0 12px; border: 1px solid #dfe6da; border-radius: 21px; background: #fff; color: #516048; font-size: 12px; white-space: nowrap; }
 .ecat .viewer.viewer-shell .viewer-mode-button[aria-pressed='true'] { background: #eaf6e4; border-color: #9bd48b; }
 .ecat .viewer.viewer-shell .zoom-controls .icon-btn { width: 40px; min-width: 40px; height: 40px; min-height: 40px; padding: 8px; border: 1px solid #dfe6da; border-radius: 50%; background: #fff; }
-.ecat .viewer.viewer-shell .shopping-panel { position: absolute; z-index: 8; top: 0; right: 0; bottom: 0; display: block; width: min(380px, 100%); height: auto; min-height: 0; overflow-y: auto; border: 1px solid #e2e8db; border-radius: 24px; background: #fff; box-shadow: 0 15px 50px #142e2926; opacity: 1; }
+.ecat .viewer.viewer-shell .shopping-panel { position: absolute; z-index: 8; top: 0; right: 0; bottom: auto; display: block; width: min(380px, 100%); height: auto; min-height: 0; max-height: 100%; overflow-y: auto; border: 1px solid #e2e8db; border-radius: 24px; background: #fff; box-shadow: 0 15px 50px #142e2926; opacity: 1; }
 .ecat .viewer.viewer-shell .product-detail-trigger { position: relative; padding: 0; border: 1px solid #e4e9df; cursor: pointer; overflow: hidden; }
 .ecat .viewer.viewer-shell .product-detail-trigger > span:last-child { position: absolute; left: 0; right: 0; bottom: 0; padding: 3px 2px; background: #f5f8f0e8; color: #547345; font-size: 10px; line-height: 1.5; }
 .ecat .viewer.viewer-shell .product-detail { padding-bottom: 8px; }
@@ -258,7 +273,7 @@
 .ecat .viewer.viewer-shell .product-detail-brand { margin: 0 0 8px; color: #718167; font-size: 11px; letter-spacing: .8px; }
 .ecat .viewer.viewer-shell .product-detail-title { margin: 0 0 12px; color: #293b30; font-size: 21px; font-weight: 500; line-height: 1.45; }
 .ecat .viewer.viewer-shell .product-detail-price { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; color: #7e8b75; font-size: 12px; }
-.ecat .viewer.viewer-shell .product-detail-price strong { color: #4a7c39; font-size: 21px; font-weight: 600; }
+.ecat .viewer.viewer-shell .product-detail-price strong { color: #ed7b20; font-size: 21px; font-weight: 600; }
 .ecat .viewer.viewer-shell .product-detail-price del { color: #8b9486; font-size: 12px; }
 .ecat .viewer.viewer-shell .product-detail-specs { margin: 0 0 16px; font-size: 12px; line-height: 1.65; }
 .ecat .viewer.viewer-shell .product-detail-specs > div { display: grid; grid-template-columns: 68px 1fr; gap: 10px; padding: 9px 0; border-top: 1px solid #e4e9df; }
@@ -311,6 +326,10 @@
   .ecat .viewer.viewer-shell .source-caption p { font-size: 8px; }
   .ecat .viewer.viewer-shell .source-caption strong { font-size: 22px; }
   .ecat .viewer.viewer-shell .source-caption > span { font-size: 10px; }
+  .ecat .viewer.viewer-shell .is-photograph .source-caption {
+    bottom: 64px;
+    max-width: calc(100% - 32px);
+  }
   .ecat .viewer.viewer-shell .source-dock-intro { display: none; }
   .ecat .viewer.viewer-shell .source-category { height: 62px; flex-basis: 130px; min-width: 130px; }
   .ecat .viewer.viewer-shell .source-category img { height: 48px; }
@@ -423,3 +442,6 @@
   .ecat .viewer.viewer-shell #browse[data-sheet] .library-filter { width: calc(100% - 36px); margin: 0 18px 12px; }
   .ecat .viewer.viewer-shell .product-detail-image { height: min(24dvh, 180px); }
 }
+
+/* Make the return action clear without repeating it in the header. */
+.ecat .viewer.viewer-shell .viewer-stage-back { gap: 5px; min-height: 44px; cursor: pointer; }

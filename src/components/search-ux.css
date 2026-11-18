@@ -40,6 +40,7 @@
 .ecat #library-dialog[data-mode=scope] .scope-options-wrap .browse-options button span { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-height: 1.3; overflow-wrap: anywhere; }
 .ecat #library-dialog[data-mode=scope] .scope-options-wrap .browse-options button { max-width: 240px; min-height: 47px; height: auto; }
 .ecat #library-dialog[data-mode=scope] .case-card { height: auto; min-height: 327px; }
+.ecat #library-dialog[data-mode=directory] .case-card h3,
 .ecat #library-dialog[data-mode=scope] .case-card h3,
 .ecat #library-dialog[data-mode=search] .case-card h3 { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; white-space: normal; line-height: 1.35; }
 .ecat #library-dialog[data-mode=scope] .case-card p,
@@ -52,6 +53,7 @@
 .ecat #library-dialog .case-summary-part { display: inline-block; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; vertical-align: top; }
 .ecat #library-dialog[data-mode=scope] .scope-card-line,
 .ecat #library-dialog[data-mode=search] .scope-card-line { display: -webkit-box; white-space: normal; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.ecat #library-dialog[data-mode=scope] .has-product-hint .scope-card-line { -webkit-line-clamp: 1; overflow: hidden; overflow-wrap: anywhere; }
 .ecat #library-dialog .global-results-search { display: flex; align-items: center; gap: 8px; height: 48px; margin: 10px 32px 18px; padding: 3px 4px 3px 12px; border: 1px solid #a8d39f; border-radius: 26px; background: #fff; }
 .ecat #library-dialog .global-results-search img { width: 30px; height: 30px; flex: 0 0 30px; }
 .ecat #library-dialog .global-results-search input { flex: 1 1 auto; min-width: 0; height: 100%; padding: 0; border: 0; outline: none; background: transparent; color: #29313c; font-size: 16px; }

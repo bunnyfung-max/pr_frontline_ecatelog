@@ -1,5 +1,6 @@
 import type { Catalog, Content, EshopProductLink, Folder, Product, Scene } from './types';
 import { estateNamesForFolder } from './housing-estate';
+import { productTagsForContent } from './product-browse';
 
 const folderLabel = (folder: Folder) =>
   folder.id === 'housing' && folder.name === 'New Housing' ? '新屋入伙' : folder.name;
@@ -207,20 +208,18 @@ export function buildSearchVocabulary(
   const spaces: string[] = [];
 
   for (const content of contents) {
-    products.push(content.name);
+    products.push(...productTagsForContent(data, content));
     spaces.push(...(content.tags ?? []));
     for (const link of content.eshopProducts ?? []) {
       if (link.title) products.push(link.title);
       if (link.brand) brands.push(link.brand);
       if (link.sku) products.push(link.sku);
-      if (link.description) products.push(link.description);
     }
     for (const product of contentProducts(data, content)) {
       products.push(product.name, product.code);
       brands.push(product.brand);
       colours.push(product.colour);
       styles.push(product.style);
-      if (product.keywords) products.push(product.keywords);
     }
     estates.push(...estateNamesForFolder(data.folders, content.folderId));
   }
@@ -268,19 +267,21 @@ type FieldHit = {
 
 function contentFields(data: Catalog, content: Content): FieldHit[] {
   const fields: FieldHit[] = [
-    { label: '名稱', value: content.name, weight: 100, category: 'product' },
+    { label: '名稱', value: content.name, weight: 100, category: 'general' },
     { label: '檔案', value: content.fileName, weight: 20, category: 'general' },
     { label: '關鍵字', value: content.keywords, weight: 40, category: 'general' },
   ];
   for (const tag of content.tags ?? []) {
-    fields.push({ label: '標籤', value: tag, weight: 80, category: 'product' });
     fields.push({ label: '標籤', value: tag, weight: 60, category: 'general' });
+  }
+  for (const tag of productTagsForContent(data, content)) {
+    fields.push({ label: '產品標籤', value: tag, weight: 80, category: 'product' });
   }
   for (const link of content.eshopProducts ?? []) {
     fields.push({ label: 'eShop 產品', value: link.title, weight: 90, category: 'product' });
     fields.push({ label: '品牌', value: link.brand, weight: 85, category: 'brand' });
     fields.push({ label: 'SKU', value: link.sku, weight: 70, category: 'product' });
-    fields.push({ label: 'eShop 描述', value: link.description, weight: 35, category: 'product' });
+    fields.push({ label: 'eShop 描述', value: link.description, weight: 35, category: 'general' });
   }
   for (const product of contentProducts(data, content)) {
     fields.push({ label: '產品', value: product.name, weight: 90, category: 'product' });
@@ -308,7 +309,7 @@ function eshopLinkFields(link: EshopProductLink): FieldHit[] {
     { label: 'eShop 產品', value: link.title, weight: 90, category: 'product' },
     { label: '品牌', value: link.brand, weight: 85, category: 'brand' },
     { label: 'SKU', value: link.sku, weight: 70, category: 'product' },
-    { label: 'eShop 描述', value: link.description, weight: 35, category: 'product' },
+    { label: 'eShop 描述', value: link.description, weight: 35, category: 'general' },
   ];
   return fields.filter((field) => field.value?.trim());
 }
@@ -353,6 +354,7 @@ function folderFields(data: Catalog, folder: Folder): FieldHit[] {
 
 function fieldMatchesTerm(field: FieldHit, term: string, category: SearchCategory | null) {
   if (category === 'estate' && field.category !== 'estate') return false;
+  if (category === 'product' && field.category !== 'product') return false;
   if (category && field.category !== category && field.category !== 'general') return false;
   const haystack = normalize(field.value);
   return expandTerm(term).some((variant) => haystack.includes(variant));
@@ -464,7 +466,7 @@ export function searchCatalogEnhanced(
     for (const scene of data.scenes) {
       if (!includeDrafts && !scene.active) continue;
       const scored = scoreFields(
-        [{ label: '場景', value: scene.name, weight: 80, category: 'product' }],
+        [{ label: '場景', value: scene.name, weight: 80, category: 'general' }],
         parsed,
       );
       if (!scored) continue;

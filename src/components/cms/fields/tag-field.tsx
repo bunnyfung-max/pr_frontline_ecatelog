@@ -6,9 +6,13 @@ import { normalizeTag } from '../utils';
 export function TagField({
   tags,
   onChange,
+  label = '標籤',
+  help = '可任意新增，用於分類、搜尋及展示。每個標籤最多 50 字，最多 30 個。',
 }: {
   tags: string[];
   onChange: (tags: string[]) => void;
+  label?: string;
+  help?: string;
 }) {
   const [input, setInput] = useState('');
   const add = (raw: string) => {
@@ -19,7 +23,7 @@ export function TagField({
   };
   return (
     <label>
-      標籤
+      {label}
       <div className="tag-field">
         {tags.length > 0 && (
           <div className="tag-list">
@@ -51,7 +55,7 @@ export function TagField({
           maxLength={50}
         />
       </div>
-      <small>可任意新增，用於分類、搜尋及展示。每個標籤最多 50 字，最多 30 個。</small>
+      <small>{help}</small>
     </label>
   );
 }

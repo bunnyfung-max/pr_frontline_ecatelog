@@ -8,7 +8,7 @@ export function Login({ onLogin, initialError }: { onLogin: (s: Session) => void
   const [busy, setBusy] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   return (
-    <div className="ecat">
+    <div className="ecat entry-root">
     <main className="shell entry-shell">
       <section className="login-cover" aria-label="門店展示封面">
         <img src="/frontline/demo/bedroom.webp" alt="家居展示空間效果" />

@@ -4,7 +4,6 @@ import { createPortal } from 'react-dom';
 import {
   ChevronLeft,
   ChevronRight,
-  Home,
   Maximize2,
   QrCode,
   Tag,
@@ -17,7 +16,7 @@ import {
 import './viewer-enhancements.css';
 import type { PDFDocumentProxy } from 'pdfjs-dist';
 import type { Catalog, Content } from '@/lib/types';
-import { activeOffer, byOrder, folderLabel, trail } from '@/lib/catalog';
+import { activeOffer, byOrder } from '@/lib/catalog';
 import { assetUrl } from '@/lib/client';
 import { contentPreviewRef } from '@/lib/content-display';
 import {
@@ -26,6 +25,7 @@ import {
   readerLeaves,
   readerSpread,
   previousReaderPage,
+  showPhotoCaption,
   type ReaderLeaf,
 } from '@/lib/sales-kit';
 import { useContentAssetCache } from '@/hooks/use-content-cache';
@@ -85,6 +85,7 @@ export function Viewer({
   const returnButtonRef = useRef<HTMLButtonElement>(null);
   const shoppingButtonRef = useRef<HTMLButtonElement>(null);
   const panelCloseRef = useRef<HTMLButtonElement>(null);
+  const productFocusKeyRef = useRef<string | null>(null);
   const thumbnailsRef = useRef<HTMLElement>(null);
   closeRef.current = close;
   const assets = useMemo(
@@ -116,6 +117,11 @@ export function Viewer({
       if (event.key === 'Escape') {
         if (dialogRef.current?.querySelector('dialog[open]')) return;
         event.preventDefault();
+        // First close the active product view or panel before leaving the reader.
+        if (panelCloseRef.current) {
+          panelCloseRef.current.click();
+          return;
+        }
         closeRef.current();
         return;
       }
@@ -227,6 +233,7 @@ export function Viewer({
     resetKey: `${content.id}:${reload}:${assets.map((asset) => asset.ref).join('\0')}`,
   });
   const { scale, setScale, targetRef: pinchRef } = usePinchZoom(page);
+  const photoCaptionVisible = showPhotoCaption(content, current, pages, scale);
   const spreadRef = useRef<HTMLDivElement>(null);
   const scaleRef = useRef(scale);
   scaleRef.current = scale;
@@ -286,8 +293,6 @@ export function Viewer({
       if (direction === 'previous' && canGoPrevious) goPrevious();
     },
   });
-  const place = trail(data.folders, content.folderId).map(folderLabel);
-  const placeTitle = place.at(-1) || content.name;
   const currentFolder = data.folders.find((item) => item.id === content.folderId);
   const units = data.folders
     .filter((item) => currentFolder && item.parentId === currentFolder.parentId)
@@ -311,7 +316,6 @@ export function Viewer({
     }).filter((corner) => content.salesKit || corner.count > 0);
   }, [leaves, content.salesKit, resolveAssetUrl]);
   const activeCorner = current ? showcaseCornerId(current.label, Boolean(content.salesKit)) : '';
-  const photograph = pages.length === 1 && current?.kind === 'image' && activeCorner === 'render';
   const ContentHeading = previewOrientation ? 'h2' : 'h1';
   const handleClose = () => {
     closeRef.current();
@@ -323,17 +327,23 @@ export function Viewer({
   };
   const selectProduct = (selection: ProductSelection) => {
     setSelectedProduct(selection);
-    requestAnimationFrame(() => dialogRef.current?.querySelector('.shopping-panel')?.scrollTo({ top: 0 }));
-  };
-  const returnToProducts = () => {
-    const key = selectedProduct ? productSelectionKey(selectedProduct) : '';
-    setSelectedProduct(null);
     requestAnimationFrame(() => {
-      const source = Array.from(dialogRef.current?.querySelectorAll<HTMLElement>('[data-product-select]') ?? [])
-        .find((element) => element.dataset.productSelect === key);
-      (source ?? panelCloseRef.current)?.focus();
+      dialogRef.current?.querySelector('.shopping-panel')?.scrollTo({ top: 0 });
+      if (!selectedProduct) panelCloseRef.current?.focus();
     });
   };
+  const returnToProducts = () => {
+    productFocusKeyRef.current = selectedProduct ? productSelectionKey(selectedProduct) : null;
+    setSelectedProduct(null);
+  };
+  useLayoutEffect(() => {
+    const key = productFocusKeyRef.current;
+    if (!panel || selectedProduct || !key) return;
+    const source = Array.from(dialogRef.current?.querySelectorAll<HTMLElement>('[data-product-select]') ?? [])
+      .find((element) => element.dataset.productSelect === key);
+    productFocusKeyRef.current = null;
+    (source ?? panelCloseRef.current)?.focus();
+  }, [panel, selectedProduct]);
   const markup = (
     <div className="ecat">
     <div
@@ -348,21 +358,10 @@ export function Viewer({
         <div className="brand showcase-brand">
           <img src="/pricerite-logo.svg" alt="Pricerite 實惠" />
           <div className="viewer-heading">
-            <span>家具展示</span>
-            <ContentHeading className="viewer-content-title">{content.name}</ContentHeading>
+            <ContentHeading className="viewer-content-title">家具展示</ContentHeading>
           </div>
         </div>
         <div className="showcase-tools">
-          <button
-            type="button"
-            ref={returnButtonRef}
-            className="subtle viewer-back"
-            onClick={handleClose}
-            aria-label="返回目錄"
-          >
-            <Home size={16} />
-            <span className="viewer-back-label">返回目錄</span>
-          </button>
           {switchFolder && !previewOrientation && (
             <button
               type="button"
@@ -377,7 +376,7 @@ export function Viewer({
         </div>
       </header>
       <div className="viewer-body">
-        <section className={`reader-area viewer-stage source-stage housing-viewer${photograph ? ' is-photograph' : ''}`} aria-label="展示內容">
+        <section className={`reader-area viewer-stage source-stage housing-viewer${photoCaptionVisible ? ' is-photograph' : ''}`} aria-label="展示內容">
           <div className="reader-scroll reader-pinch housing-canvas" ref={pinchRef}>
             {current && current.kind !== 'link' ? (
               <div
@@ -437,9 +436,15 @@ export function Viewer({
               <Maximize2 size={18} />
             </button>
           )}
-          <div className="source-title">
-            <span>{placeTitle}</span>
-          </div>
+          <button type="button" ref={returnButtonRef} className="source-title viewer-stage-back" onClick={handleClose} aria-label={`返回目錄：${content.name}`} title={content.name}>
+            <ChevronLeft size={16} aria-hidden="true" />
+            <span>返回目錄 · {content.name}</span>
+          </button>
+          {photoCaptionVisible && (
+            <div className="source-caption" aria-hidden="true">
+              <strong>{content.name}</strong>
+            </div>
+          )}
           {leaves.length > 1 && leaves.length <= 12 && (
             <div className="showcase-dots source-dots" aria-label="頁面位置">
               {leaves.map((leaf, index) => (
@@ -550,7 +555,6 @@ export function Viewer({
                 )}
                 </div>
                 <div className="viewer-reader-controls">
-                <span className="reader-page-position" aria-live="polite">{pageLoading ? '載入中' : `第 ${pages.join('–') || '0'} / ${total} 頁`}</span>
                 {leaves.length > 1 && (
                   <button type="button" className="viewer-mode-button" aria-haspopup="dialog" aria-controls="browse" onClick={() => setSheet('documents')}>
                     選擇房型文件
@@ -584,14 +588,14 @@ export function Viewer({
               <button
                 className="icon-btn"
                 ref={panelCloseRef}
-                aria-label="收起相關產品"
-                onClick={closePanel}
+                aria-label={selectedProduct ? "返回產品列表" : "收起相關產品"}
+                onClick={selectedProduct ? returnToProducts : closePanel}
               >
                 <X size={21} />
               </button>
             </div>
             {selectedProduct ? (
-              <ContentProductDetail content={content} products={data.products} prices={eshopPrices} selection={selectedProduct} onSelect={selectProduct} onBack={returnToProducts} />
+              <ContentProductDetail content={content} products={data.products} prices={eshopPrices} selection={selectedProduct} onSelect={selectProduct} />
             ) : (
             <>
             <ContentShoppingLinks content={content} products={data.products} eshopPrices={eshopPrices} onProductSelect={selectProduct} />
